@@ -66,7 +66,7 @@ export default function PatternDesigner() {
         canvasRows: prev.canvasRows + 1
       }));
       
-      // Shift all existing symbols down by one row and add the new symbol
+      // Shift all existing symbols down by one row and add the new symbol at the clicked position
       setGridSymbols(prev => {
         const newMap = new Map();
         
@@ -77,8 +77,8 @@ export default function PatternDesigner() {
           newMap.set(newKey, symbolData);
         });
         
-        // Then add the new symbol at row 0 (the new top row)
-        const cellKey = `0-${col}`;
+        // Add the new symbol at row 1 (where the user clicked, now shifted down)
+        const cellKey = `1-${col}`;
         newMap.set(cellKey, { symbol, color });
         
         return newMap;
