@@ -8,7 +8,7 @@ import PatternInfoPanel from "@/components/canvas/PatternInfoPanel";
 import { SavePatternModal } from "@/components/modals/SavePatternModal";
 import { indexedDBStorage } from "@/lib/indexdb-storage";
 import { drawCrochetSymbol } from "@/lib/crochet-symbols";
-import { patternDomain, type PatternState } from "@/lib/pattern-domain";
+import { simplePattern, type SimplePattern } from "@/lib/simple-pattern";
 
 export interface CanvasState {
   tool: 'pen' | 'eraser' | 'fill' | 'select';
@@ -49,8 +49,8 @@ export default function PatternDesigner() {
     canvasCols: 40, // Default number of columns
   });
 
-  // Use domain state instead of local state
-  const [domainState, setDomainState] = useState<PatternState>(patternDomain.getState());
+  // Use simple pattern state
+  const [patternState, setPatternState] = useState<SimplePattern>(simplePattern.getPattern());
 
   const [patternInfo, setPatternInfo] = useState<PatternInfo>({
     title: '',
@@ -63,34 +63,26 @@ export default function PatternDesigner() {
     materials: [],
   });
 
-  // Subscribe to domain state changes
+  // Update canvas state when pattern changes
   useEffect(() => {
-    const unsubscribe = patternDomain.subscribe((newState) => {
-      setDomainState(newState);
-      // Update canvas state to match domain
-      setCanvasState(prev => ({
-        ...prev,
-        canvasRows: newState.grid.rows,
-        canvasCols: newState.grid.cols,
-        gridSize: newState.grid.gridSize
-      }));
-    });
-
-    return unsubscribe;
-  }, []);
-
-  // Automatically redraw canvas when domain state changes
-  useEffect(() => {
+    setCanvasState(prev => ({
+      ...prev,
+      canvasRows: patternState.rows,
+      canvasCols: patternState.cols,
+      gridSize: patternState.gridSize
+    }));
     redrawCanvas();
-  }, [domainState, canvasState.showGrid]);
+  }, [patternState]);
 
-  // Symbol placement and removal handlers using domain
+  // Symbol placement and removal handlers
   const handleSymbolPlaced = (row: number, col: number, symbol: string, color: string) => {
-    patternDomain.placeSymbol(row, col, symbol, color);
+    simplePattern.placeSymbol(row, col, symbol, color);
+    setPatternState(simplePattern.getPattern());
   };
 
   const handleSymbolErased = (row: number, col: number) => {
-    patternDomain.removeSymbol(row, col);
+    simplePattern.removeSymbol(row, col);
+    setPatternState(simplePattern.getPattern());
   };
 
   const redrawCanvas = () => {
@@ -108,12 +100,12 @@ export default function PatternDesigner() {
       drawGrid(ctx, canvas.width, canvas.height, canvasState.gridSize);
     }
     
-    // Draw symbols from domain state
-    domainState.grid.symbols.forEach((symbol) => {
+    // Draw symbols from pattern state
+    patternState.symbols.forEach((symbol) => {
       const x = symbol.col * canvasState.gridSize + canvasState.gridSize / 2;
       const y = symbol.row * canvasState.gridSize + canvasState.gridSize / 2;
       
-      drawCrochetSymbol(ctx, symbol.symbolType, x, y, symbol.color, canvasState.gridSize * 0.8);
+      drawCrochetSymbol(ctx, symbol.symbol, x, y, symbol.color, canvasState.gridSize * 0.8);
     });
   };
 
@@ -151,10 +143,10 @@ export default function PatternDesigner() {
         yarnWeight: patternInfo.yarnWeight,
         difficulty: patternInfo.difficulty,
         canvasData,
-        gridSymbols: patternDomain.exportPattern().symbols,
-        canvasRows: domainState.grid.rows,
-        canvasCols: domainState.grid.cols,
-        gridSize: domainState.grid.gridSize,
+        gridSymbols: patternState.symbols,
+        canvasRows: patternState.rows,
+        canvasCols: patternState.cols,
+        gridSize: patternState.gridSize,
         canvasWidth: canvasRef.current.width,
         canvasHeight: canvasRef.current.height,
       };
@@ -206,26 +198,37 @@ export default function PatternDesigner() {
       }));
     }
     
-    // Load grid symbols using domain
+    // Load grid symbols
     if (pattern.gridSymbols) {
-      const symbols = Array.isArray(pattern.gridSymbols) 
-        ? pattern.gridSymbols 
-        : Object.entries(pattern.gridSymbols).map(([key, value]: [string, any]) => {
-            const [row, col] = key.split('-').map(Number);
-            return {
-              row,
-              col,
-              symbolType: value.symbol || value.symbolType,
-              color: value.color
-            };
-          });
+      let symbols = [];
       
-      patternDomain.loadPattern({
+      if (Array.isArray(pattern.gridSymbols)) {
+        symbols = pattern.gridSymbols.map((s: any) => ({
+          row: s.row,
+          col: s.col,
+          symbol: s.symbol || s.symbolType,
+          color: s.color
+        }));
+      } else {
+        symbols = Object.entries(pattern.gridSymbols).map(([key, value]: [string, any]) => {
+          const [row, col] = key.split('-').map(Number);
+          return {
+            row,
+            col,
+            symbol: value.symbol || value.symbolType,
+            color: value.color
+          };
+        });
+      }
+      
+      simplePattern.loadPattern({
         symbols,
         rows: pattern.canvasRows || 3,
         cols: pattern.canvasCols || 40,
         gridSize: pattern.gridSize || 20
       });
+      
+      setPatternState(simplePattern.getPattern());
     }
     
     // Load canvas image
@@ -267,23 +270,31 @@ export default function PatternDesigner() {
   };
 
   const handleUndo = () => {
-    patternDomain.undo();
+    if (simplePattern.undo()) {
+      setPatternState(simplePattern.getPattern());
+    }
   };
 
   const handleRedo = () => {
-    patternDomain.redo();
+    if (simplePattern.redo()) {
+      setPatternState(simplePattern.getPattern());
+    }
   };
 
   const handleClearCanvas = () => {
-    patternDomain.clearAll();
+    simplePattern.clear();
+    simplePattern.saveToHistory();
+    setPatternState(simplePattern.getPattern());
   };
 
   const saveToHistory = () => {
-    patternDomain.saveToHistory();
+    simplePattern.saveToHistory();
   };
 
   const handleFillRectangle = (startRow: number, startCol: number, endRow: number, endCol: number, symbol: string, color: string) => {
-    patternDomain.fillRectangle(startRow, startCol, endRow, endCol, symbol, color);
+    simplePattern.fillRectangle(startRow, startCol, endRow, endCol, symbol, color);
+    simplePattern.saveToHistory();
+    setPatternState(simplePattern.getPattern());
   };
 
   return (
@@ -345,8 +356,8 @@ export default function PatternDesigner() {
           onSymbolErased={handleSymbolErased}
           onRedrawNeeded={redrawCanvas}
           onFillRectangle={handleFillRectangle}
-          canUndo={patternDomain.canUndo()}
-          canRedo={patternDomain.canRedo()}
+          canUndo={simplePattern.canUndo()}
+          canRedo={simplePattern.canRedo()}
         />
         
         <SavePatternModal
