@@ -20,6 +20,7 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
     const [isDrawing, setIsDrawing] = useState(false);
     const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
     const [hoverGridPos, setHoverGridPos] = useState<{ x: number; y: number } | null>(null);
+    const [fillStartPos, setFillStartPos] = useState<{ x: number; y: number } | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Separate effect for grid drawing only
@@ -98,7 +99,23 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
       setIsDrawing(true);
       setLastPos(pos);
 
-      if (canvasState.tool === 'pen' && canvasState.symbol) {
+      if (canvasState.tool === 'fill' && canvasState.symbol) {
+        // Fill tool - two-click operation
+        const gridCol = Math.floor(pos.x / canvasState.gridSize);
+        const gridRow = Math.floor(pos.y / canvasState.gridSize);
+        const gridX = gridCol * canvasState.gridSize;
+        const gridY = gridRow * canvasState.gridSize;
+        
+        if (!fillStartPos) {
+          // First click - set start position
+          setFillStartPos({ x: gridX, y: gridY });
+        } else {
+          // Second click - fill rectangle and reset
+          fillRectangle(ctx, fillStartPos, { x: gridX, y: gridY });
+          setFillStartPos(null);
+          onSaveToHistory();
+        }
+      } else if (canvasState.tool === 'pen' && canvasState.symbol) {
         // Snap to grid center - better alignment
         const gridX = Math.floor(pos.x / canvasState.gridSize) * canvasState.gridSize + canvasState.gridSize / 2;
         const gridY = Math.floor(pos.y / canvasState.gridSize) * canvasState.gridSize + canvasState.gridSize / 2;
@@ -166,11 +183,33 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
       setLastPos(pos);
     };
 
+    const fillRectangle = (ctx: CanvasRenderingContext2D, start: { x: number; y: number }, end: { x: number; y: number }) => {
+      if (!canvasState.symbol) return;
+      
+      const startCol = Math.floor(start.x / canvasState.gridSize);
+      const startRow = Math.floor(start.y / canvasState.gridSize);
+      const endCol = Math.floor(end.x / canvasState.gridSize);
+      const endRow = Math.floor(end.y / canvasState.gridSize);
+      
+      const minCol = Math.min(startCol, endCol);
+      const maxCol = Math.max(startCol, endCol);
+      const minRow = Math.min(startRow, endRow);
+      const maxRow = Math.max(startRow, endRow);
+      
+      for (let col = minCol; col <= maxCol; col++) {
+        for (let row = minRow; row <= maxRow; row++) {
+          const symbolX = col * canvasState.gridSize + canvasState.gridSize / 2;
+          const symbolY = row * canvasState.gridSize + canvasState.gridSize / 2;
+          drawCrochetSymbol(ctx, canvasState.symbol, symbolX, symbolY, canvasState.color, canvasState.gridSize);
+        }
+      }
+    };
+
     const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
       const pos = getCanvasCoordinates(e);
       
-      // Simple hover feedback via CSS cursor change
-      if (canvasState.tool === 'pen' && canvasState.symbol && !isDrawing) {
+      // Hover feedback for different tools
+      if ((canvasState.tool === 'pen' || canvasState.tool === 'fill') && canvasState.symbol && !isDrawing) {
         const gridCol = Math.floor(pos.x / canvasState.gridSize);
         const gridRow = Math.floor(pos.y / canvasState.gridSize);
         const gridX = gridCol * canvasState.gridSize;
@@ -178,7 +217,7 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
         
         const newHoverPos = { x: gridX, y: gridY };
         
-        // Only update if position changed (no visual rendering to avoid glitch)
+        // Only update if position changed
         if (!hoverGridPos || hoverGridPos.x !== newHoverPos.x || hoverGridPos.y !== newHoverPos.y) {
           setHoverGridPos(newHoverPos);
         }
@@ -274,6 +313,8 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
                   "border border-craft-300 rounded-lg",
                   canvasState.tool === 'pen' && canvasState.symbol 
                     ? "cursor-pointer" 
+                    : canvasState.tool === 'fill' && canvasState.symbol
+                    ? "cursor-cell"
                     : canvasState.tool === 'eraser'
                     ? "cursor-grab"
                     : "cursor-crosshair"
@@ -302,8 +343,27 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
                       <span className="uppercase">{canvasState.symbol}</span>
                     </>
                   )}
+                  {canvasState.tool === 'fill' && fillStartPos && (
+                    <>
+                      <div className="w-px h-4 bg-craft-200"></div>
+                      <span className="text-blue-600">Click second corner</span>
+                    </>
+                  )}
                 </div>
               </div>
+              
+              {/* Visual indicator for fill start position */}
+              {fillStartPos && (
+                <div
+                  className="absolute border-2 border-blue-500 bg-blue-200/30 pointer-events-none"
+                  style={{
+                    left: fillStartPos.x,
+                    top: fillStartPos.y,
+                    width: canvasState.gridSize,
+                    height: canvasState.gridSize,
+                  }}
+                />
+              )}
             </div>
           </div>
         </div>
