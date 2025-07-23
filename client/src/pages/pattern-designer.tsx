@@ -45,7 +45,7 @@ export default function PatternDesigner() {
     gridSize: 20,
     showGrid: true,
     zoom: 100,
-    canvasRows: 1, // Start with just one row
+    canvasRows: 3, // Start with 3 rows (1 working row + 2 empty rows above)
     canvasCols: 40, // Default number of columns
   });
 
@@ -61,41 +61,25 @@ export default function PatternDesigner() {
     return () => clearTimeout(timeoutId);
   }, [canvasState.canvasRows, gridSymbols, canvasState.showGrid]);
 
-  // Handle symbol placement with proper row expansion
+  // Handle symbol placement with smart row expansion
   const handleSymbolPlaced = (row: number, col: number, symbol: string, color: string) => {
-    // If placing on the top row (row 0), we need to add a row above and shift everything
-    if (row === 0) {
-      // Increment row count first
-      setCanvasState(prev => ({
-        ...prev,
-        canvasRows: prev.canvasRows + 1
-      }));
-      
-      // Shift all existing symbols down and add the new one
-      setGridSymbols(prev => {
-        const newMap = new Map();
-        
-        // Shift existing symbols down by 1 row
-        prev.forEach((symbolData, key) => {
-          const [oldRow, oldCol] = key.split('-').map(Number);
-          const shiftedKey = `${oldRow + 1}-${oldCol}`;
-          newMap.set(shiftedKey, symbolData);
-        });
-        
-        // Add the new symbol at the position it will be after shifting (row 1)
-        const newSymbolKey = `1-${col}`;
-        newMap.set(newSymbolKey, { symbol, color });
-        
-        return newMap;
-      });
-    } else {
-      // Normal placement on existing rows
-      const cellKey = `${row}-${col}`;
-      setGridSymbols(prev => {
-        const newMap = new Map(prev);
-        newMap.set(cellKey, { symbol, color });
-        return newMap;
-      });
+    const cellKey = `${row}-${col}`;
+    
+    // Always place the symbol first
+    setGridSymbols(prev => {
+      const newMap = new Map(prev);
+      newMap.set(cellKey, { symbol, color });
+      return newMap;
+    });
+    
+    // Check if we need to add more rows (when placing in the second row from top)
+    if (row <= 1) {
+      setTimeout(() => {
+        setCanvasState(prev => ({
+          ...prev,
+          canvasRows: prev.canvasRows + 1
+        }));
+      }, 50); // Wait a bit for the symbol placement to complete
     }
   };
 
@@ -315,10 +299,10 @@ export default function PatternDesigner() {
       if (ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         setGridSymbols(new Map()); // Clear symbol tracking
-        // Reset to single row when cleared
+        // Reset to 3 rows when cleared (1 working + 2 empty)
         setCanvasState(prev => ({
           ...prev,
-          canvasRows: 1
+          canvasRows: 3
         }));
         // Redraw grid if enabled
         if (canvasState.showGrid) {

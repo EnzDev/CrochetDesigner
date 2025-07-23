@@ -120,7 +120,10 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
           // Second click - fill rectangle and reset
           fillRectangle(ctx, fillStartPos, { x: gridX, y: gridY });
           setFillStartPos(null);
-          onSaveToHistory();
+          // Wait for all symbol placements to complete before saving
+          setTimeout(() => {
+            onSaveToHistory();
+          }, 100);
         }
       } else if (canvasState.tool === 'pen' && canvasState.symbol) {
         // Snap to grid center - better alignment
