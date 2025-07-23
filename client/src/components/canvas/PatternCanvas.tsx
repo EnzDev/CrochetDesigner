@@ -216,24 +216,30 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
       const minRow = Math.min(startRow, endRow);
       const maxRow = Math.max(startRow, endRow);
       
-      // Collect all positions to fill first
-      const positions: { row: number; col: number }[] = [];
+      // For fill operations, we need to handle them differently to avoid conflicts
+      // First draw all symbols visually
       for (let row = minRow; row <= maxRow; row++) {
         for (let col = minCol; col <= maxCol; col++) {
-          positions.push({ row, col });
+          const symbolX = col * canvasState.gridSize + canvasState.gridSize / 2;
+          const symbolY = row * canvasState.gridSize + canvasState.gridSize / 2;
+          if (canvasState.symbol) {
+            drawCrochetSymbol(ctx, canvasState.symbol, symbolX, symbolY, canvasState.color, canvasState.gridSize);
+          }
         }
       }
       
-      // Draw all symbols first
-      positions.forEach(({ row, col }) => {
-        const symbolX = col * canvasState.gridSize + canvasState.gridSize / 2;
-        const symbolY = row * canvasState.gridSize + canvasState.gridSize / 2;
-        drawCrochetSymbol(ctx, canvasState.symbol, symbolX, symbolY, canvasState.color, canvasState.gridSize);
-      });
+      // Then handle symbol placement in batches to manage row expansion
+      // Process from bottom to top to avoid shifting conflicts
+      const sortedRows = Array.from(new Set(Array.from({length: maxRow - minRow + 1}, (_, i) => maxRow - i)));
       
-      // Then notify about symbol placements (this triggers row expansion if needed)
-      positions.forEach(({ row, col }) => {
-        onSymbolPlaced(row, col, canvasState.symbol, canvasState.color);
+      sortedRows.forEach((row, index) => {
+        setTimeout(() => {
+          for (let col = minCol; col <= maxCol; col++) {
+            if (row >= minRow && row <= maxRow && canvasState.symbol) {
+              onSymbolPlaced(row, col, canvasState.symbol, canvasState.color);
+            }
+          }
+        }, index * 20); // Stagger the placements
       });
     };
 

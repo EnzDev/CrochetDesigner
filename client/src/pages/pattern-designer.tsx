@@ -61,30 +61,43 @@ export default function PatternDesigner() {
     return () => clearTimeout(timeoutId);
   }, [canvasState.canvasRows, gridSymbols, canvasState.showGrid]);
 
-  // Handle symbol placement with smart row expansion
+  // Handle symbol placement with upward row expansion (proper crochet growth)
   const handleSymbolPlaced = (row: number, col: number, symbol: string, color: string) => {
-    const cellKey = `${row}-${col}`;
-    
-    // Always place the symbol first
-    setGridSymbols(prev => {
-      const newMap = new Map(prev);
-      newMap.set(cellKey, { symbol, color });
-      return newMap;
-    });
-    
-    // Check if we need to add more rows (when working on the top 2 rows)
+    // If placing on the top 2 rows, we need to add rows above and shift everything down
     if (row <= 1) {
-      // Use a more aggressive approach for row expansion to ensure fill works
-      setTimeout(() => {
-        setCanvasState(prev => {
-          // Add 2 rows if we're working on the very top row to give more space
-          const rowsToAdd = row === 0 ? 2 : 1;
-          return {
-            ...prev,
-            canvasRows: prev.canvasRows + rowsToAdd
-          };
+      const rowsToAdd = row === 0 ? 2 : 1;
+      
+      // First, update row count
+      setCanvasState(prev => ({
+        ...prev,
+        canvasRows: prev.canvasRows + rowsToAdd
+      }));
+      
+      // Then shift all existing symbols down and add the new one
+      setGridSymbols(prev => {
+        const newMap = new Map();
+        
+        // Shift all existing symbols down by the number of rows added
+        prev.forEach((symbolData, key) => {
+          const [oldRow, oldCol] = key.split('-').map(Number);
+          const newKey = `${oldRow + rowsToAdd}-${oldCol}`;
+          newMap.set(newKey, symbolData);
         });
-      }, 10); // Shorter delay for faster response
+        
+        // Add the new symbol at its shifted position
+        const newSymbolKey = `${row + rowsToAdd}-${col}`;
+        newMap.set(newSymbolKey, { symbol, color });
+        
+        return newMap;
+      });
+    } else {
+      // Normal placement on existing rows
+      const cellKey = `${row}-${col}`;
+      setGridSymbols(prev => {
+        const newMap = new Map(prev);
+        newMap.set(cellKey, { symbol, color });
+        return newMap;
+      });
     }
   };
 
