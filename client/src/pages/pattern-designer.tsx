@@ -7,6 +7,7 @@ import ToolSidebar from "@/components/canvas/ToolSidebar";
 import PatternInfoPanel from "@/components/canvas/PatternInfoPanel";
 import { SavePatternModal } from "@/components/modals/SavePatternModal";
 import { indexedDBStorage } from "@/lib/indexdb-storage";
+import { drawCrochetSymbol } from "@/lib/crochet-symbols";
 
 export interface CanvasState {
   tool: 'pen' | 'eraser' | 'fill' | 'select';
@@ -72,30 +73,35 @@ export default function PatternDesigner() {
 
   // Symbol placement and removal handlers
   const handleSymbolPlaced = (row: number, col: number, symbol: string, color: string) => {
-    const key = `${row}-${col}`;
-    setGridSymbols(prev => {
-      const newSymbols = new Map(prev);
-      newSymbols.set(key, { symbol, color });
-      return newSymbols;
-    });
-
-    // If placing on the top row, add a new row above
+    // First check if we need to add a new row at the top
     if (row === 0) {
+      // Add new row and shift existing symbols down
       setCanvasState(prev => ({
         ...prev,
         canvasRows: prev.canvasRows + 1
       }));
       
-      // Update all existing symbol positions (shift down by 1 row)
+      // Update all existing symbol positions (shift down by 1 row) and add new symbol
       setGridSymbols(prev => {
         const newSymbols = new Map<string, { symbol: string; color: string }>();
+        
+        // Shift all existing symbols down by 1 row
         prev.forEach((value, oldKey) => {
           const [oldRow, oldCol] = oldKey.split('-').map(Number);
           const newKey = `${oldRow + 1}-${oldCol}`;
           newSymbols.set(newKey, value);
         });
-        // Add the new symbol at the new top row
+        
+        // Add the new symbol at the top row (0)
         newSymbols.set(`0-${col}`, { symbol, color });
+        return newSymbols;
+      });
+    } else {
+      // Normal placement - just add the symbol
+      const key = `${row}-${col}`;
+      setGridSymbols(prev => {
+        const newSymbols = new Map(prev);
+        newSymbols.set(key, { symbol, color });
         return newSymbols;
       });
     }
@@ -158,17 +164,14 @@ export default function PatternDesigner() {
       drawGrid(ctx, canvas.width, canvas.height, canvasState.gridSize);
     }
     
-    // Draw symbols
+    // Draw symbols using proper crochet symbol drawing
     gridSymbols.forEach((symbolData, key) => {
       const [row, col] = key.split('-').map(Number);
       const x = col * canvasState.gridSize + canvasState.gridSize / 2;
       const y = row * canvasState.gridSize + canvasState.gridSize / 2;
       
-      ctx.fillStyle = symbolData.color;
-      ctx.font = `${canvasState.gridSize * 0.6}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(symbolData.symbol, x, y);
+      // Import the drawCrochetSymbol function inline for now
+      drawCrochetSymbol(ctx, symbolData.symbol, x, y, symbolData.color, canvasState.gridSize * 0.8);
     });
   };
 

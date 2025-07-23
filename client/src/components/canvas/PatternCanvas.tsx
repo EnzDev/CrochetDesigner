@@ -133,8 +133,13 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
         const gridY = gridRow * canvasState.gridSize + canvasState.gridSize / 2;
         
         drawCrochetSymbol(ctx, canvasState.symbol, gridX, gridY, canvasState.color, canvasState.gridSize);
-        onSymbolPlaced(gridRow, gridCol, canvasState.symbol, canvasState.color);
-        onSaveToHistory();
+        // Wait for symbol to be drawn before tracking and saving
+        setTimeout(() => {
+          onSymbolPlaced(gridRow, gridCol, canvasState.symbol, canvasState.color);
+          setTimeout(() => {
+            onSaveToHistory();
+          }, 10);
+        }, 5);
       } else if (canvasState.tool === 'pen') {
         // Start freehand drawing
         ctx.beginPath();
@@ -183,7 +188,10 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
         
         if (currentGridKey !== lastGridKey) {
           drawCrochetSymbol(ctx, canvasState.symbol, gridX, gridY, canvasState.color, canvasState.gridSize);
-          onSymbolPlaced(gridRow, gridCol, canvasState.symbol, canvasState.color);
+          // Add a small delay to ensure canvas draw completes before symbol tracking
+          setTimeout(() => {
+            onSymbolPlaced(gridRow, gridCol, canvasState.symbol, canvasState.color);
+          }, 5);
         }
       } else if (canvasState.tool === 'eraser') {
         // Continuous smart erasing
@@ -236,10 +244,13 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
         setTimeout(() => {
           for (let col = minCol; col <= maxCol; col++) {
             if (row >= minRow && row <= maxRow && canvasState.symbol) {
-              onSymbolPlaced(row, col, canvasState.symbol, canvasState.color);
+              // Further delay each column placement
+              setTimeout(() => {
+                onSymbolPlaced(row, col, canvasState.symbol, canvasState.color);
+              }, col * 5);
             }
           }
-        }, index * 20); // Stagger the placements
+        }, index * 30); // Increased stagger delay for row expansion
       });
     };
 
