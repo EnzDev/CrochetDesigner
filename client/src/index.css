@@ -1,0 +1,197 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(20, 14.3%, 4.1%);
+  --muted: hsl(60, 4.8%, 95.9%);
+  --muted-foreground: hsl(25, 5.3%, 44.7%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(20, 14.3%, 4.1%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(20, 14.3%, 4.1%);
+  --border: hsl(20, 5.9%, 90%);
+  --input: hsl(20, 5.9%, 90%);
+  --primary: hsl(24, 50%, 44%);
+  --primary-foreground: hsl(210, 20%, 98%);
+  --secondary: hsl(37, 48%, 66%);
+  --secondary-foreground: hsl(24, 9.8%, 10%);
+  --accent: hsl(251, 100%, 70%);
+  --accent-foreground: hsl(210, 20%, 98%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(60, 9.1%, 97.8%);
+  --ring: hsl(20, 14.3%, 4.1%);
+  --radius: 0.5rem;
+
+  /* Craft-specific colors */
+  --craft-50: hsl(20, 9%, 98%);
+  --craft-100: hsl(24, 6%, 96%);
+  --craft-200: hsl(20, 5.9%, 90%);
+  --craft-300: hsl(24, 5.7%, 82.9%);
+  --craft-400: hsl(24, 5.4%, 63.9%);
+  --craft-500: hsl(25, 5.3%, 44.7%);
+  --craft-600: hsl(33, 5.5%, 32.4%);
+  --craft-700: hsl(30, 6.3%, 25.1%);
+  --craft-800: hsl(12, 6.5%, 15.1%);
+  --craft-900: hsl(24, 9.8%, 10%);
+}
+
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(24, 50%, 44%);
+  --primary-foreground: hsl(210, 20%, 98%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(251, 100%, 70%);
+  --accent-foreground: hsl(210, 20%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 4.9%, 83.9%);
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .craft-50 {
+    color: var(--craft-50);
+  }
+  .bg-craft-50 {
+    background-color: var(--craft-50);
+  }
+  .craft-100 {
+    color: var(--craft-100);
+  }
+  .bg-craft-100 {
+    background-color: var(--craft-100);
+  }
+  .craft-200 {
+    color: var(--craft-200);
+  }
+  .bg-craft-200 {
+    background-color: var(--craft-200);
+  }
+  .border-craft-200 {
+    border-color: var(--craft-200);
+  }
+  .craft-300 {
+    color: var(--craft-300);
+  }
+  .bg-craft-300 {
+    background-color: var(--craft-300);
+  }
+  .border-craft-300 {
+    border-color: var(--craft-300);
+  }
+  .craft-400 {
+    color: var(--craft-400);
+  }
+  .bg-craft-400 {
+    background-color: var(--craft-400);
+  }
+  .text-craft-400 {
+    color: var(--craft-400);
+  }
+  .craft-500 {
+    color: var(--craft-500);
+  }
+  .bg-craft-500 {
+    background-color: var(--craft-500);
+  }
+  .text-craft-500 {
+    color: var(--craft-500);
+  }
+  .craft-600 {
+    color: var(--craft-600);
+  }
+  .bg-craft-600 {
+    background-color: var(--craft-600);
+  }
+  .text-craft-600 {
+    color: var(--craft-600);
+  }
+  .craft-700 {
+    color: var(--craft-700);
+  }
+  .bg-craft-700 {
+    background-color: var(--craft-700);
+  }
+  .text-craft-700 {
+    color: var(--craft-700);
+  }
+  .craft-800 {
+    color: var(--craft-800);
+  }
+  .bg-craft-800 {
+    background-color: var(--craft-800);
+  }
+  .text-craft-800 {
+    color: var(--craft-800);
+  }
+  .border-craft-800 {
+    border-color: var(--craft-800);
+  }
+  .craft-900 {
+    color: var(--craft-900);
+  }
+  .bg-craft-900 {
+    background-color: var(--craft-900);
+  }
+  .text-craft-900 {
+    color: var(--craft-900);
+  }
+}
+
+/* Canvas specific styles */
+.canvas-grid {
+  background-image: 
+    linear-gradient(rgba(229, 231, 235, 0.8) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(229, 231, 235, 0.8) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.symbol-btn:hover {
+  transform: scale(1.05);
+  transition: transform 0.1s ease;
+}
+
+.tool-active {
+  background-color: hsl(251, 100%, 70%) !important;
+  color: white !important;
+}
+
+/* Custom scrollbar for better craft aesthetic */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--craft-100);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--craft-300);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--craft-400);
+}

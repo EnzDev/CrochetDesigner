@@ -1,0 +1,235 @@
+import { forwardRef, useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Undo2, Redo2, Trash2, ZoomIn, ZoomOut } from "lucide-react";
+import { drawCrochetSymbol } from "@/lib/crochet-symbols";
+import type { CanvasState } from "@/pages/pattern-designer";
+
+interface PatternCanvasProps {
+  canvasState: CanvasState;
+  onUndo: () => void;
+  onRedo: () => void;
+  onClearCanvas: () => void;
+  onSaveToHistory: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+}
+
+const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
+  ({ canvasState, onUndo, onRedo, onClearCanvas, onSaveToHistory, canUndo, canRedo }, ref) => {
+    const [isDrawing, setIsDrawing] = useState(false);
+    const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      const canvas = ref as React.RefObject<HTMLCanvasElement>;
+      if (!canvas.current) return;
+
+      const ctx = canvas.current.getContext('2d');
+      if (!ctx) return;
+
+      // Draw grid
+      if (canvasState.showGrid) {
+        drawGrid(ctx, canvas.current.width, canvas.current.height, canvasState.gridSize);
+      }
+    }, [canvasState.showGrid, canvasState.gridSize, ref]);
+
+    const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, gridSize: number) => {
+      ctx.strokeStyle = 'rgba(229, 231, 235, 0.8)';
+      ctx.lineWidth = 1;
+      
+      for (let x = 0; x <= width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      
+      for (let y = 0; y <= height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+    };
+
+    const getCanvasCoordinates = (e: React.MouseEvent<HTMLCanvasElement>) => {
+      const canvas = ref as React.RefObject<HTMLCanvasElement>;
+      if (!canvas.current) return { x: 0, y: 0 };
+
+      const rect = canvas.current.getBoundingClientRect();
+      const scaleX = canvas.current.width / rect.width;
+      const scaleY = canvas.current.height / rect.height;
+
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY,
+      };
+    };
+
+    const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+      const canvas = ref as React.RefObject<HTMLCanvasElement>;
+      if (!canvas.current) return;
+
+      const ctx = canvas.current.getContext('2d');
+      if (!ctx) return;
+
+      const pos = getCanvasCoordinates(e);
+      setIsDrawing(true);
+      setLastPos(pos);
+
+      if (canvasState.tool === 'pen' && canvasState.symbol) {
+        // Snap to grid
+        const gridX = Math.round(pos.x / canvasState.gridSize) * canvasState.gridSize;
+        const gridY = Math.round(pos.y / canvasState.gridSize) * canvasState.gridSize;
+        
+        drawCrochetSymbol(ctx, canvasState.symbol, gridX, gridY, canvasState.color, canvasState.gridSize);
+        onSaveToHistory();
+      } else if (canvasState.tool === 'pen') {
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+        ctx.strokeStyle = canvasState.color;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+      }
+    };
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+      if (!isDrawing) return;
+
+      const canvas = ref as React.RefObject<HTMLCanvasElement>;
+      if (!canvas.current) return;
+
+      const ctx = canvas.current.getContext('2d');
+      if (!ctx) return;
+
+      const pos = getCanvasCoordinates(e);
+
+      if (canvasState.tool === 'pen' && !canvasState.symbol) {
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+      } else if (canvasState.tool === 'eraser') {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 10, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+      }
+
+      setLastPos(pos);
+    };
+
+    const handleMouseUp = () => {
+      if (isDrawing && canvasState.tool === 'pen' && !canvasState.symbol) {
+        onSaveToHistory();
+      }
+      setIsDrawing(false);
+    };
+
+    const handleZoomIn = () => {
+      // Implement zoom functionality
+    };
+
+    const handleZoomOut = () => {
+      // Implement zoom functionality
+    };
+
+    return (
+      <div className="flex-1 flex flex-col bg-craft-50">
+        {/* Canvas Toolbar */}
+        <div className="bg-white border-b border-craft-200 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onUndo}
+                disabled={!canUndo}
+                className="text-craft-600 hover:text-craft-800"
+              >
+                <Undo2 className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onRedo}
+                disabled={!canRedo}
+                className="text-craft-600 hover:text-craft-800"
+              >
+                <Redo2 className="w-4 h-4" />
+              </Button>
+              <div className="w-px h-6 bg-craft-200"></div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClearCanvas}
+                className="text-craft-600 hover:text-craft-800"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear Canvas
+              </Button>
+            </div>
+            
+            <div className="flex items-center space-x-4 text-sm text-craft-600">
+              <span>Zoom: {canvasState.zoom}%</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleZoomOut}
+                className="text-craft-600 hover:text-craft-800"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleZoomIn}
+                className="text-craft-600 hover:text-craft-800"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Canvas Area */}
+        <div className="flex-1 p-6 overflow-auto" ref={containerRef}>
+          <div className="bg-white rounded-lg shadow-sm border border-craft-200 p-6">
+            <div className="relative">
+              <canvas
+                ref={ref}
+                className="border border-craft-300 rounded-lg cursor-crosshair"
+                width={800}
+                height={600}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+              />
+              
+              {/* Canvas overlay for info */}
+              <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-2 shadow-sm">
+                <div className="flex items-center space-x-2 text-xs text-craft-600">
+                  <span>Canvas: 800×600</span>
+                  <div className="w-px h-4 bg-craft-200"></div>
+                  <span className="capitalize">{canvasState.tool} Tool</span>
+                  {canvasState.symbol && (
+                    <>
+                      <div className="w-px h-4 bg-craft-200"></div>
+                      <span className="uppercase">{canvasState.symbol}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+);
+
+PatternCanvas.displayName = "PatternCanvas";
+
+export default PatternCanvas;
