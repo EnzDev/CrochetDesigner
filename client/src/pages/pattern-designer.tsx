@@ -49,13 +49,17 @@ export default function PatternDesigner() {
     canvasCols: 40, // Default number of columns
   });
 
-  // Track which grid cells have symbols
-  const [usedCells, setUsedCells] = useState<Set<string>>(new Set());
+  // Track which grid cells have symbols with their data
+  const [gridSymbols, setGridSymbols] = useState<Map<string, { symbol: string; color: string }>>(new Map());
 
   // Handle symbol placement to expand rows
-  const handleSymbolPlaced = (row: number, col: number) => {
+  const handleSymbolPlaced = (row: number, col: number, symbol: string, color: string) => {
     const cellKey = `${row}-${col}`;
-    setUsedCells(prev => new Set(prev).add(cellKey));
+    setGridSymbols(prev => {
+      const newMap = new Map(prev);
+      newMap.set(cellKey, { symbol, color });
+      return newMap;
+    });
     
     // If placing on the last row, add a new row
     if (row === canvasState.canvasRows - 1) {
@@ -69,11 +73,61 @@ export default function PatternDesigner() {
   // Handle symbol erasing
   const handleSymbolErased = (row: number, col: number) => {
     const cellKey = `${row}-${col}`;
-    setUsedCells(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(cellKey);
-      return newSet;
+    setGridSymbols(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(cellKey);
+      return newMap;
     });
+  };
+
+  // Redraw canvas with all symbols
+  const redrawCanvas = async () => {
+    if (!canvasRef.current) return;
+    
+    const ctx = canvasRef.current.getContext('2d');
+    if (!ctx) return;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    
+    // Redraw grid if enabled
+    if (canvasState.showGrid) {
+      drawGrid(ctx, canvasRef.current.width, canvasRef.current.height, canvasState.gridSize);
+    }
+    
+    // Import the symbol drawing function once
+    const { drawCrochetSymbol } = await import('@/lib/crochet-symbols');
+    
+    // Redraw all symbols
+    gridSymbols.forEach(({ symbol, color }, cellKey) => {
+      const [row, col] = cellKey.split('-').map(Number);
+      const x = col * canvasState.gridSize + canvasState.gridSize / 2;
+      const y = row * canvasState.gridSize + canvasState.gridSize / 2;
+      
+      drawCrochetSymbol(ctx, symbol, x, y, color, canvasState.gridSize);
+    });
+  };
+
+  // Helper function for drawing grid (moved from canvas component)
+  const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, gridSize: number) => {
+    ctx.strokeStyle = 'rgba(156, 163, 175, 0.6)';
+    ctx.lineWidth = 1;
+    
+    // Draw vertical lines
+    for (let x = 0; x <= width; x += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(x + 0.5, 0);
+      ctx.lineTo(x + 0.5, height);
+      ctx.stroke();
+    }
+    
+    // Draw horizontal lines
+    for (let y = 0; y <= height; y += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(0, y + 0.5);
+      ctx.lineTo(width, y + 0.5);
+      ctx.stroke();
+    }
   };
 
   const [patternInfo, setPatternInfo] = useState<PatternInfo>({
@@ -222,25 +276,12 @@ export default function PatternDesigner() {
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        setGridSymbols(new Map()); // Clear symbol tracking
         // Redraw grid if enabled
         if (canvasState.showGrid) {
-          ctx.strokeStyle = 'rgba(156, 163, 175, 0.6)';
-          ctx.lineWidth = 1;
-          
-          for (let x = 0; x <= canvas.width; x += canvasState.gridSize) {
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, canvas.height);
-            ctx.stroke();
-          }
-          
-          for (let y = 0; y <= canvas.height; y += canvasState.gridSize) {
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(canvas.width, y);
-            ctx.stroke();
-          }
+          drawGrid(ctx, canvas.width, canvas.height, canvasState.gridSize);
         }
+        saveToHistory();
       }
     }
   };
@@ -313,6 +354,7 @@ export default function PatternDesigner() {
           onSaveToHistory={saveToHistory}
           onSymbolPlaced={handleSymbolPlaced}
           onSymbolErased={handleSymbolErased}
+          onRedrawNeeded={redrawCanvas}
           canUndo={historyIndex > 0}
           canRedo={historyIndex < history.length - 1}
         />

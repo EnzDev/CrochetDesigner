@@ -11,14 +11,15 @@ interface PatternCanvasProps {
   onRedo: () => void;
   onClearCanvas: () => void;
   onSaveToHistory: () => void;
-  onSymbolPlaced: (row: number, col: number) => void;
+  onSymbolPlaced: (row: number, col: number, symbol: string, color: string) => void;
   onSymbolErased: (row: number, col: number) => void;
+  onRedrawNeeded: () => void;
   canUndo: boolean;
   canRedo: boolean;
 }
 
 const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
-  ({ canvasState, onUndo, onRedo, onClearCanvas, onSaveToHistory, onSymbolPlaced, onSymbolErased, canUndo, canRedo }, ref) => {
+  ({ canvasState, onUndo, onRedo, onClearCanvas, onSaveToHistory, onSymbolPlaced, onSymbolErased, onRedrawNeeded, canUndo, canRedo }, ref) => {
     const [isDrawing, setIsDrawing] = useState(false);
     const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
     const [hoverGridPos, setHoverGridPos] = useState<{ x: number; y: number } | null>(null);
@@ -129,7 +130,7 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
         const gridY = gridRow * canvasState.gridSize + canvasState.gridSize / 2;
         
         drawCrochetSymbol(ctx, canvasState.symbol, gridX, gridY, canvasState.color, canvasState.gridSize);
-        onSymbolPlaced(gridRow, gridCol);
+        onSymbolPlaced(gridRow, gridCol, canvasState.symbol, canvasState.color);
         onSaveToHistory();
       } else if (canvasState.tool === 'pen') {
         // Start freehand drawing
@@ -139,18 +140,12 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
       } else if (canvasState.tool === 'eraser') {
-        // Start erasing
+        // Smart erasing - remove symbol and redraw
         const gridCol = Math.floor(pos.x / canvasState.gridSize);
         const gridRow = Math.floor(pos.y / canvasState.gridSize);
         
-        ctx.save();
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.beginPath();
-        ctx.arc(pos.x, pos.y, 15, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.restore();
-        
         onSymbolErased(gridRow, gridCol);
+        onRedrawNeeded();
       }
     };
 
@@ -174,24 +169,32 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
         ctx.moveTo(pos.x, pos.y);
       } else if (canvasState.tool === 'pen' && canvasState.symbol) {
         // Continuous symbol placement on grid
-        const gridX = Math.floor(pos.x / canvasState.gridSize) * canvasState.gridSize + canvasState.gridSize / 2;
-        const gridY = Math.floor(pos.y / canvasState.gridSize) * canvasState.gridSize + canvasState.gridSize / 2;
+        const gridCol = Math.floor(pos.x / canvasState.gridSize);
+        const gridRow = Math.floor(pos.y / canvasState.gridSize);
+        const gridX = gridCol * canvasState.gridSize + canvasState.gridSize / 2;
+        const gridY = gridRow * canvasState.gridSize + canvasState.gridSize / 2;
         
         // Only place if we moved to a different grid cell
-        const currentGridKey = `${Math.floor(gridX / canvasState.gridSize)}-${Math.floor(gridY / canvasState.gridSize)}`;
-        const lastGridKey = `${Math.floor(lastPos.x / canvasState.gridSize)}-${Math.floor(lastPos.y / canvasState.gridSize)}`;
+        const currentGridKey = `${gridRow}-${gridCol}`;
+        const lastGridKey = `${Math.floor(lastPos.y / canvasState.gridSize)}-${Math.floor(lastPos.x / canvasState.gridSize)}`;
         
         if (currentGridKey !== lastGridKey) {
           drawCrochetSymbol(ctx, canvasState.symbol, gridX, gridY, canvasState.color, canvasState.gridSize);
+          onSymbolPlaced(gridRow, gridCol, canvasState.symbol, canvasState.color);
         }
       } else if (canvasState.tool === 'eraser') {
-        // Continuous erasing
-        ctx.save();
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.beginPath();
-        ctx.arc(pos.x, pos.y, 15, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.restore();
+        // Continuous smart erasing
+        const gridCol = Math.floor(pos.x / canvasState.gridSize);
+        const gridRow = Math.floor(pos.y / canvasState.gridSize);
+        
+        // Only erase if we moved to a different grid cell
+        const currentGridKey = `${gridRow}-${gridCol}`;
+        const lastGridKey = `${Math.floor(lastPos.y / canvasState.gridSize)}-${Math.floor(lastPos.x / canvasState.gridSize)}`;
+        
+        if (currentGridKey !== lastGridKey) {
+          onSymbolErased(gridRow, gridCol);
+          onRedrawNeeded();
+        }
       }
 
       setLastPos(pos);
@@ -215,7 +218,7 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
           const symbolX = col * canvasState.gridSize + canvasState.gridSize / 2;
           const symbolY = row * canvasState.gridSize + canvasState.gridSize / 2;
           drawCrochetSymbol(ctx, canvasState.symbol, symbolX, symbolY, canvasState.color, canvasState.gridSize);
-          onSymbolPlaced(row, col);
+          onSymbolPlaced(row, col, canvasState.symbol, canvasState.color);
         }
       }
     };
