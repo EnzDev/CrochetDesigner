@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pen, Eraser, PaintBucket, MousePointer, Grid3x3 } from "lucide-react";
+import { Pen, Eraser, PaintBucket, MousePointer, Grid3x3, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CanvasState } from "@/pages/pattern-designer";
 
@@ -149,6 +149,41 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
           >
             <Grid3x3 className="w-4 h-4 mr-2" />
             {canvasState.showGrid ? 'Hide Grid' : 'Show Grid'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Canvas Size Configuration */}
+      <div>
+        <h3 className="text-sm font-medium text-craft-700 mb-3">Canvas Size</h3>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs text-craft-600 mb-1">Columns</label>
+            <div className="flex items-center space-x-2">
+              <input
+                type="range"
+                min="10"
+                max="100"
+                value={canvasState.canvasCols}
+                onChange={(e) => setCanvasState(prev => ({
+                  ...prev,
+                  canvasCols: parseInt(e.target.value)
+                }))}
+                className="flex-1"
+              />
+              <span className="text-xs text-craft-600 w-8">{canvasState.canvasCols}</span>
+            </div>
+          </div>
+          <div className="text-xs text-craft-500">
+            Rows: {canvasState.canvasRows} (expands automatically)
+          </div>
+          <Button
+            onClick={onClearCanvas}
+            variant="outline"
+            className="w-full text-craft-600 border-craft-300 hover:bg-craft-50"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Clear Canvas
           </Button>
         </div>
       </div>

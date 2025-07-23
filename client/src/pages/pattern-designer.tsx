@@ -18,6 +18,8 @@ export interface CanvasState {
   gridSize: number;
   showGrid: boolean;
   zoom: number;
+  canvasRows: number;
+  canvasCols: number;
 }
 
 export interface PatternInfo {
@@ -43,7 +45,36 @@ export default function PatternDesigner() {
     gridSize: 20,
     showGrid: true,
     zoom: 100,
+    canvasRows: 1, // Start with just one row
+    canvasCols: 40, // Default number of columns
   });
+
+  // Track which grid cells have symbols
+  const [usedCells, setUsedCells] = useState<Set<string>>(new Set());
+
+  // Handle symbol placement to expand rows
+  const handleSymbolPlaced = (row: number, col: number) => {
+    const cellKey = `${row}-${col}`;
+    setUsedCells(prev => new Set(prev).add(cellKey));
+    
+    // If placing on the last row, add a new row
+    if (row === canvasState.canvasRows - 1) {
+      setCanvasState(prev => ({
+        ...prev,
+        canvasRows: prev.canvasRows + 1
+      }));
+    }
+  };
+
+  // Handle symbol erasing
+  const handleSymbolErased = (row: number, col: number) => {
+    const cellKey = `${row}-${col}`;
+    setUsedCells(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(cellKey);
+      return newSet;
+    });
+  };
 
   const [patternInfo, setPatternInfo] = useState<PatternInfo>({
     title: '',
@@ -280,6 +311,8 @@ export default function PatternDesigner() {
           onRedo={handleRedo}
           onClearCanvas={handleClearCanvas}
           onSaveToHistory={saveToHistory}
+          onSymbolPlaced={handleSymbolPlaced}
+          onSymbolErased={handleSymbolErased}
           canUndo={historyIndex > 0}
           canRedo={historyIndex < history.length - 1}
         />

@@ -11,17 +11,23 @@ interface PatternCanvasProps {
   onRedo: () => void;
   onClearCanvas: () => void;
   onSaveToHistory: () => void;
+  onSymbolPlaced: (row: number, col: number) => void;
+  onSymbolErased: (row: number, col: number) => void;
   canUndo: boolean;
   canRedo: boolean;
 }
 
 const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
-  ({ canvasState, onUndo, onRedo, onClearCanvas, onSaveToHistory, canUndo, canRedo }, ref) => {
+  ({ canvasState, onUndo, onRedo, onClearCanvas, onSaveToHistory, onSymbolPlaced, onSymbolErased, canUndo, canRedo }, ref) => {
     const [isDrawing, setIsDrawing] = useState(false);
     const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
     const [hoverGridPos, setHoverGridPos] = useState<{ x: number; y: number } | null>(null);
     const [fillStartPos, setFillStartPos] = useState<{ x: number; y: number } | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+
+    // Calculate dynamic canvas dimensions
+    const canvasWidth = canvasState.canvasCols * canvasState.gridSize;
+    const canvasHeight = canvasState.canvasRows * canvasState.gridSize;
 
     // Separate effect for grid drawing only
     useEffect(() => {
@@ -33,9 +39,9 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
 
       // Only redraw grid when grid settings change
       if (canvasState.showGrid) {
-        drawGrid(ctx, canvas.current.width, canvas.current.height, canvasState.gridSize);
+        drawGrid(ctx, canvasWidth, canvasHeight, canvasState.gridSize);
       }
-    }, [canvasState.showGrid, canvasState.gridSize, ref]);
+    }, [canvasState.showGrid, canvasState.gridSize, canvasWidth, canvasHeight, ref]);
 
 
 
@@ -117,10 +123,13 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
         }
       } else if (canvasState.tool === 'pen' && canvasState.symbol) {
         // Snap to grid center - better alignment
-        const gridX = Math.floor(pos.x / canvasState.gridSize) * canvasState.gridSize + canvasState.gridSize / 2;
-        const gridY = Math.floor(pos.y / canvasState.gridSize) * canvasState.gridSize + canvasState.gridSize / 2;
+        const gridCol = Math.floor(pos.x / canvasState.gridSize);
+        const gridRow = Math.floor(pos.y / canvasState.gridSize);
+        const gridX = gridCol * canvasState.gridSize + canvasState.gridSize / 2;
+        const gridY = gridRow * canvasState.gridSize + canvasState.gridSize / 2;
         
         drawCrochetSymbol(ctx, canvasState.symbol, gridX, gridY, canvasState.color, canvasState.gridSize);
+        onSymbolPlaced(gridRow, gridCol);
         onSaveToHistory();
       } else if (canvasState.tool === 'pen') {
         // Start freehand drawing
@@ -131,12 +140,17 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
         ctx.lineCap = 'round';
       } else if (canvasState.tool === 'eraser') {
         // Start erasing
+        const gridCol = Math.floor(pos.x / canvasState.gridSize);
+        const gridRow = Math.floor(pos.y / canvasState.gridSize);
+        
         ctx.save();
         ctx.globalCompositeOperation = 'destination-out';
         ctx.beginPath();
         ctx.arc(pos.x, pos.y, 15, 0, 2 * Math.PI);
         ctx.fill();
         ctx.restore();
+        
+        onSymbolErased(gridRow, gridCol);
       }
     };
 
@@ -201,6 +215,7 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
           const symbolX = col * canvasState.gridSize + canvasState.gridSize / 2;
           const symbolY = row * canvasState.gridSize + canvasState.gridSize / 2;
           drawCrochetSymbol(ctx, canvasState.symbol, symbolX, symbolY, canvasState.color, canvasState.gridSize);
+          onSymbolPlaced(row, col);
         }
       }
     };
@@ -319,8 +334,8 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
                     ? "cursor-grab"
                     : "cursor-crosshair"
                 )}
-                width={800}
-                height={600}
+                width={canvasWidth}
+                height={canvasHeight}
                 onMouseDown={handleStartDrawing}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleStopDrawing}
@@ -334,7 +349,7 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
               {/* Canvas overlay for info */}
               <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-2 shadow-sm">
                 <div className="flex items-center space-x-2 text-xs text-craft-600">
-                  <span>Canvas: 800×600</span>
+                  <span>Canvas: {canvasWidth}×{canvasHeight} | Rows: {canvasState.canvasRows}</span>
                   <div className="w-px h-4 bg-craft-200"></div>
                   <span className="capitalize">{canvasState.tool} Tool</span>
                   {canvasState.symbol && (
