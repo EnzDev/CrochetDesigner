@@ -58,8 +58,8 @@ export function drawCrochetSymbol(
   ctx.lineWidth = 2;
   ctx.lineCap = 'round';
 
-  const centerX = x + size / 2;
-  const centerY = y + size / 2;
+  const centerX = x;
+  const centerY = y;
 
   switch (symbolId) {
     case 'chain':

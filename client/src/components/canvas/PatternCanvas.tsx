@@ -18,6 +18,7 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
   ({ canvasState, onUndo, onRedo, onClearCanvas, onSaveToHistory, canUndo, canRedo }, ref) => {
     const [isDrawing, setIsDrawing] = useState(false);
     const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
+    const [hoverGridPos, setHoverGridPos] = useState<{ x: number; y: number } | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -27,27 +28,41 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
       const ctx = canvas.current.getContext('2d');
       if (!ctx) return;
 
+      // Clear and redraw everything
+      ctx.clearRect(0, 0, canvas.current.width, canvas.current.height);
+      
       // Draw grid
       if (canvasState.showGrid) {
         drawGrid(ctx, canvas.current.width, canvas.current.height, canvasState.gridSize);
       }
-    }, [canvasState.showGrid, canvasState.gridSize, ref]);
+      
+      // Draw hover highlight
+      if (hoverGridPos && canvasState.tool === 'pen' && canvasState.symbol) {
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.1)';
+        ctx.fillRect(hoverGridPos.x, hoverGridPos.y, canvasState.gridSize, canvasState.gridSize);
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(hoverGridPos.x, hoverGridPos.y, canvasState.gridSize, canvasState.gridSize);
+      }
+    }, [canvasState.showGrid, canvasState.gridSize, hoverGridPos, canvasState.tool, canvasState.symbol, ref]);
 
     const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, gridSize: number) => {
       ctx.strokeStyle = 'rgba(156, 163, 175, 0.6)';
       ctx.lineWidth = 1;
       
+      // Draw vertical lines
       for (let x = 0; x <= width; x += gridSize) {
         ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
+        ctx.moveTo(x + 0.5, 0); // Add 0.5 for crisp lines
+        ctx.lineTo(x + 0.5, height);
         ctx.stroke();
       }
       
+      // Draw horizontal lines
       for (let y = 0; y <= height; y += gridSize) {
         ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
+        ctx.moveTo(0, y + 0.5); // Add 0.5 for crisp lines
+        ctx.lineTo(width, y + 0.5);
         ctx.stroke();
       }
     };
@@ -92,9 +107,9 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
       setLastPos(pos);
 
       if (canvasState.tool === 'pen' && canvasState.symbol) {
-        // Snap to grid
-        const gridX = Math.round(pos.x / canvasState.gridSize) * canvasState.gridSize;
-        const gridY = Math.round(pos.y / canvasState.gridSize) * canvasState.gridSize;
+        // Snap to grid center - better alignment
+        const gridX = Math.floor(pos.x / canvasState.gridSize) * canvasState.gridSize + canvasState.gridSize / 2;
+        const gridY = Math.floor(pos.y / canvasState.gridSize) * canvasState.gridSize + canvasState.gridSize / 2;
         
         drawCrochetSymbol(ctx, canvasState.symbol, gridX, gridY, canvasState.color, canvasState.gridSize);
         onSaveToHistory();
@@ -133,6 +148,25 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
       }
 
       setLastPos(pos);
+    };
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+      const pos = getCanvasCoordinates(e);
+      
+      // Update hover grid position for visual feedback
+      if (canvasState.tool === 'pen' && canvasState.symbol) {
+        const gridCol = Math.floor(pos.x / canvasState.gridSize);
+        const gridRow = Math.floor(pos.y / canvasState.gridSize);
+        const gridX = gridCol * canvasState.gridSize;
+        const gridY = gridRow * canvasState.gridSize;
+        
+        setHoverGridPos({ x: gridX, y: gridY });
+      } else {
+        setHoverGridPos(null);
+      }
+      
+      // Call the drawing handler for actual drawing
+      handleDrawing(e);
     };
 
     const handleStopDrawing = (e?: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -219,7 +253,7 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
                 width={800}
                 height={600}
                 onMouseDown={handleStartDrawing}
-                onMouseMove={handleDrawing}
+                onMouseMove={handleMouseMove}
                 onMouseUp={handleStopDrawing}
                 onMouseLeave={handleStopDrawing}
                 onTouchStart={handleStartDrawing}
