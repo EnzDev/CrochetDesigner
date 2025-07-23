@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
@@ -52,7 +52,12 @@ export default function PatternDesigner() {
   // Track which grid cells have symbols with their data
   const [gridSymbols, setGridSymbols] = useState<Map<string, { symbol: string; color: string }>>(new Map());
 
-  // Handle symbol placement to expand rows
+  // Automatically redraw canvas when rows change or symbols are updated
+  useEffect(() => {
+    redrawCanvas();
+  }, [canvasState.canvasRows, gridSymbols, canvasState.showGrid]);
+
+  // Handle symbol placement to expand rows (crochet grows upward)
   const handleSymbolPlaced = (row: number, col: number, symbol: string, color: string) => {
     const cellKey = `${row}-${col}`;
     setGridSymbols(prev => {
@@ -61,31 +66,76 @@ export default function PatternDesigner() {
       return newMap;
     });
     
-    // If placing on the last row, add a new row
-    if (row === canvasState.canvasRows - 1) {
+    // If placing on the top row (row 0), add a new row above and shift everything down
+    if (row === 0) {
       setCanvasState(prev => ({
         ...prev,
         canvasRows: prev.canvasRows + 1
       }));
+      
+      // Shift all existing symbols down by one row
+      setGridSymbols(prev => {
+        const newMap = new Map();
+        prev.forEach((symbolData, key) => {
+          const [oldRow, oldCol] = key.split('-').map(Number);
+          const newKey = `${oldRow + 1}-${oldCol}`;
+          newMap.set(newKey, symbolData);
+        });
+        // Add the new symbol at row 0
+        newMap.set(cellKey, { symbol, color });
+        return newMap;
+      });
     }
   };
 
-  // Handle symbol erasing
+  // Handle symbol erasing with smart row management
   const handleSymbolErased = (row: number, col: number) => {
     const cellKey = `${row}-${col}`;
     setGridSymbols(prev => {
       const newMap = new Map(prev);
       newMap.delete(cellKey);
+      
+      // Check if the top row is now empty and can be removed
+      const topRowHasSymbols = Array.from(newMap.keys()).some(key => {
+        const [symbolRow] = key.split('-').map(Number);
+        return symbolRow === 0;
+      });
+      
+      // If top row is empty and we have more than 1 row, remove it and shift everything up
+      if (!topRowHasSymbols && canvasState.canvasRows > 1) {
+        const shiftedMap = new Map();
+        newMap.forEach((symbolData, key) => {
+          const [oldRow, oldCol] = key.split('-').map(Number);
+          if (oldRow > 0) {
+            const newKey = `${oldRow - 1}-${oldCol}`;
+            shiftedMap.set(newKey, symbolData);
+          }
+        });
+        
+        setCanvasState(prev => ({
+          ...prev,
+          canvasRows: prev.canvasRows - 1
+        }));
+        
+        return shiftedMap;
+      }
+      
       return newMap;
     });
   };
 
-  // Redraw canvas with all symbols
+  // Redraw canvas with all symbols (accounts for dynamic canvas resizing)
   const redrawCanvas = async () => {
     if (!canvasRef.current) return;
     
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
+    
+    // Update canvas size based on current row count
+    const newHeight = canvasState.canvasRows * canvasState.gridSize;
+    if (canvasRef.current.height !== newHeight) {
+      canvasRef.current.height = newHeight;
+    }
     
     // Clear canvas
     ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
@@ -101,10 +151,13 @@ export default function PatternDesigner() {
     // Redraw all symbols
     gridSymbols.forEach(({ symbol, color }, cellKey) => {
       const [row, col] = cellKey.split('-').map(Number);
-      const x = col * canvasState.gridSize + canvasState.gridSize / 2;
-      const y = row * canvasState.gridSize + canvasState.gridSize / 2;
-      
-      drawCrochetSymbol(ctx, symbol, x, y, color, canvasState.gridSize);
+      // Ensure symbol is within current canvas bounds
+      if (row < canvasState.canvasRows && col < canvasState.canvasCols) {
+        const x = col * canvasState.gridSize + canvasState.gridSize / 2;
+        const y = row * canvasState.gridSize + canvasState.gridSize / 2;
+        
+        drawCrochetSymbol(ctx, symbol, x, y, color, canvasState.gridSize);
+      }
     });
   };
 
@@ -277,6 +330,11 @@ export default function PatternDesigner() {
       if (ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         setGridSymbols(new Map()); // Clear symbol tracking
+        // Reset to single row when cleared
+        setCanvasState(prev => ({
+          ...prev,
+          canvasRows: 1
+        }));
         // Redraw grid if enabled
         if (canvasState.showGrid) {
           drawGrid(ctx, canvas.width, canvas.height, canvasState.gridSize);

@@ -10,13 +10,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-- **January 23, 2025**: Fixed grid alignment and click detection issues
-  - Improved symbol placement accuracy with proper grid snapping
-  - Added visual hover feedback for better grid targeting
-  - Fixed canvas rendering glitches and flickering
-  - Enhanced eraser functionality with continuous operation
-  - Added continuous drawing/painting support for symbols and eraser tool
-  - Improved touch compatibility for mobile devices
+- **January 23, 2025**: Rebuilt data model for proper crochet template support
+  - Implemented proper symbol tracking system that remembers what was drawn
+  - Fixed erasing to be non-destructive - canvas redraws from symbol data
+  - Restructured row expansion to grow upward (like real crochet patterns)
+  - New rows now appear above existing content when symbols placed on top row
+  - Smart row management removes empty top rows automatically
+  - Canvas dynamically resizes height based on row count
+  - Enhanced continuous drawing/erasing with proper grid cell tracking
+  - Fixed grid alignment and click detection issues with proper grid snapping
 
 ## System Architecture
 
