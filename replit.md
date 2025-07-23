@@ -8,6 +8,16 @@ This is a full-stack web application for designing and managing crochet patterns
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+- **January 23, 2025**: Fixed grid alignment and click detection issues
+  - Improved symbol placement accuracy with proper grid snapping
+  - Added visual hover feedback for better grid targeting
+  - Fixed canvas rendering glitches and flickering
+  - Enhanced eraser functionality with continuous operation
+  - Added continuous drawing/painting support for symbols and eraser tool
+  - Improved touch compatibility for mobile devices
+
 ## System Architecture
 
 ### Frontend Architecture

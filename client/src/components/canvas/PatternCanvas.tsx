@@ -106,11 +106,20 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
         drawCrochetSymbol(ctx, canvasState.symbol, gridX, gridY, canvasState.color, canvasState.gridSize);
         onSaveToHistory();
       } else if (canvasState.tool === 'pen') {
+        // Start freehand drawing
         ctx.beginPath();
         ctx.moveTo(pos.x, pos.y);
         ctx.strokeStyle = canvasState.color;
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
+      } else if (canvasState.tool === 'eraser') {
+        // Start erasing
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 15, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.restore();
       }
     };
 
@@ -127,16 +136,31 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
       const pos = getCanvasCoordinates(e);
 
       if (canvasState.tool === 'pen' && !canvasState.symbol) {
+        // Continuous freehand drawing
         ctx.lineTo(pos.x, pos.y);
         ctx.stroke();
         ctx.beginPath();
         ctx.moveTo(pos.x, pos.y);
+      } else if (canvasState.tool === 'pen' && canvasState.symbol) {
+        // Continuous symbol placement on grid
+        const gridX = Math.floor(pos.x / canvasState.gridSize) * canvasState.gridSize + canvasState.gridSize / 2;
+        const gridY = Math.floor(pos.y / canvasState.gridSize) * canvasState.gridSize + canvasState.gridSize / 2;
+        
+        // Only place if we moved to a different grid cell
+        const currentGridKey = `${Math.floor(gridX / canvasState.gridSize)}-${Math.floor(gridY / canvasState.gridSize)}`;
+        const lastGridKey = `${Math.floor(lastPos.x / canvasState.gridSize)}-${Math.floor(lastPos.y / canvasState.gridSize)}`;
+        
+        if (currentGridKey !== lastGridKey) {
+          drawCrochetSymbol(ctx, canvasState.symbol, gridX, gridY, canvasState.color, canvasState.gridSize);
+        }
       } else if (canvasState.tool === 'eraser') {
+        // Continuous erasing
+        ctx.save();
         ctx.globalCompositeOperation = 'destination-out';
         ctx.beginPath();
-        ctx.arc(pos.x, pos.y, 10, 0, 2 * Math.PI);
+        ctx.arc(pos.x, pos.y, 15, 0, 2 * Math.PI);
         ctx.fill();
-        ctx.globalCompositeOperation = 'source-over';
+        ctx.restore();
       }
 
       setLastPos(pos);
@@ -168,7 +192,7 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
 
     const handleStopDrawing = (e?: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
       if (e) e.preventDefault();
-      if (isDrawing && canvasState.tool === 'pen' && !canvasState.symbol) {
+      if (isDrawing && (canvasState.tool === 'pen' || canvasState.tool === 'eraser')) {
         onSaveToHistory();
       }
       setIsDrawing(false);
@@ -250,6 +274,8 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
                   "border border-craft-300 rounded-lg",
                   canvasState.tool === 'pen' && canvasState.symbol 
                     ? "cursor-pointer" 
+                    : canvasState.tool === 'eraser'
+                    ? "cursor-grab"
                     : "cursor-crosshair"
                 )}
                 width={800}
