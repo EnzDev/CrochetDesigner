@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Pen, Eraser, PaintBucket, MousePointer, Grid3x3, Trash2, Plus, Minus } from "lucide-react";
+import { Pen, Eraser, PaintBucket, MousePointer, Grid3x3, Trash2, Plus, Minus, Copy, Clipboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CanvasState } from "@/pages/pattern-designer";
 import { simplePattern } from "@/lib/simple-pattern";
@@ -12,9 +12,13 @@ interface ToolSidebarProps {
   setCanvasState: (state: CanvasState | ((prev: CanvasState) => CanvasState)) => void;
   onClearCanvas: () => void;
   onPatternChange: () => void;
+  onCopySelection?: () => void;
+  onPasteSelection?: () => void;
+  hasSelection?: boolean;
+  hasCopiedSymbols?: boolean;
 }
 
-export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas, onPatternChange }: ToolSidebarProps) {
+export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas, onPatternChange, onCopySelection, onPasteSelection, hasSelection, hasCopiedSymbols }: ToolSidebarProps) {
   const tools = [
     { id: 'pen', icon: Pen, label: 'Pen' },
     { id: 'eraser', icon: Eraser, label: 'Eraser' },
@@ -102,6 +106,38 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
           ))}
         </div>
       </div>
+
+      {/* Selection Controls */}
+      {canvasState.tool === 'select' && (
+        <div className="mb-6">
+          <h3 className="text-sm font-medium text-craft-700 mb-3">Selection Actions</h3>
+          <div className="flex gap-2">
+            <Button
+              onClick={onCopySelection}
+              disabled={!hasSelection}
+              variant="outline"
+              size="sm"
+              className="flex-1"
+            >
+              <Copy className="h-4 w-4 mr-1" />
+              Copy
+            </Button>
+            <Button
+              onClick={() => onPasteSelection?.()}
+              disabled={!hasCopiedSymbols}
+              variant="outline"
+              size="sm"
+              className="flex-1"
+            >
+              <Clipboard className="h-4 w-4 mr-1" />
+              Paste
+            </Button>
+          </div>
+          <p className="text-xs text-craft-600 mt-2">
+            Use Ctrl+C to copy, Ctrl+V to paste, Esc to clear selection
+          </p>
+        </div>
+      )}
 
       {/* Color Palette */}
       <div className="mb-6">

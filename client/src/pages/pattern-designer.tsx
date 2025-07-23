@@ -8,7 +8,7 @@ import PatternInfoPanel from "@/components/canvas/PatternInfoPanel";
 import { SavePatternModal } from "@/components/modals/SavePatternModal";
 import { indexedDBStorage } from "@/lib/indexdb-storage";
 import { drawCrochetSymbol } from "@/lib/crochet-symbols";
-import { simplePattern, type SimplePattern } from "@/lib/simple-pattern";
+import { simplePattern, type SimplePattern, type SimpleSymbol } from "@/lib/simple-pattern";
 
 export interface CanvasState {
   tool: 'pen' | 'eraser' | 'fill' | 'select';
@@ -20,6 +20,13 @@ export interface CanvasState {
   zoom: number;
   canvasRows: number;
   canvasCols: number;
+}
+
+export interface SelectionArea {
+  startRow: number;
+  startCol: number;
+  endRow: number;
+  endCol: number;
 }
 
 export interface PatternInfo {
@@ -53,6 +60,8 @@ export default function PatternDesigner() {
 
   // Use simple pattern state
   const [patternState, setPatternState] = useState<SimplePattern>(simplePattern.getPattern());
+  const [selection, setSelection] = useState<SelectionArea | null>(null);
+  const [copiedSymbols, setCopiedSymbols] = useState<SimpleSymbol[]>([]);
 
   const [patternInfo, setPatternInfo] = useState<PatternInfo>({
     title: '',
@@ -78,7 +87,87 @@ export default function PatternDesigner() {
   // Redraw canvas when canvas state or pattern state changes
   useEffect(() => {
     redrawCanvas();
-  }, [canvasState, patternState]);
+  }, [canvasState, patternState, selection]);
+
+  // Keyboard shortcuts for copy/paste
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        e.preventDefault();
+        copySelection();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        e.preventDefault();
+        // Paste at top-left of current selection or at (0,0)
+        const targetRow = selection ? Math.min(selection.startRow, selection.endRow) : 0;
+        const targetCol = selection ? Math.min(selection.startCol, selection.endCol) : 0;
+        pasteSelection(targetRow, targetCol);
+      } else if (e.key === 'Escape') {
+        setSelection(null);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selection, copiedSymbols]);
+
+  // Selection handlers
+  const handleSelectionStart = (row: number, col: number) => {
+    setSelection({ startRow: row, startCol: col, endRow: row, endCol: col });
+  };
+
+  const handleSelectionUpdate = (row: number, col: number) => {
+    if (selection) {
+      setSelection({ ...selection, endRow: row, endCol: col });
+    }
+  };
+
+  const handleSelectionEnd = () => {
+    // Selection is complete, ready for copy/paste operations
+  };
+
+  const copySelection = () => {
+    if (!selection) return;
+    
+    const minRow = Math.min(selection.startRow, selection.endRow);
+    const maxRow = Math.max(selection.startRow, selection.endRow);
+    const minCol = Math.min(selection.startCol, selection.endCol);
+    const maxCol = Math.max(selection.startCol, selection.endCol);
+    
+    const selectedSymbols = patternState.symbols.filter(symbol => 
+      symbol.symbol !== 'occupied' &&
+      symbol.row >= minRow && symbol.row <= maxRow &&
+      symbol.col >= minCol && symbol.col <= maxCol
+    ).map(symbol => ({
+      ...symbol,
+      row: symbol.row - minRow, // Normalize to relative position
+      col: symbol.col - minCol
+    }));
+    
+    setCopiedSymbols(selectedSymbols);
+    toast({
+      title: "Copied",
+      description: `Copied ${selectedSymbols.length} symbols`,
+    });
+  };
+
+  const pasteSelection = (targetRow: number, targetCol: number) => {
+    if (copiedSymbols.length === 0) return;
+    
+    copiedSymbols.forEach(symbol => {
+      simplePattern.placeSymbol(
+        targetRow + symbol.row,
+        targetCol + symbol.col,
+        symbol.symbol,
+        symbol.color
+      );
+    });
+    
+    setPatternState(simplePattern.getPattern());
+    toast({
+      title: "Pasted",
+      description: `Pasted ${copiedSymbols.length} symbols`,
+    });
+  };
 
   // Symbol placement and removal handlers
   const handleSymbolPlaced = (row: number, col: number, symbol: string, color: string) => {
@@ -119,6 +208,21 @@ export default function PatternDesigner() {
       
       drawCrochetSymbol(ctx, symbol.symbol, x, y, symbol.color, canvasState.gridSize * 0.8);
     });
+
+    // Draw selection rectangle if selecting
+    if (selection) {
+      ctx.strokeStyle = '#007bff';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      
+      const startX = selection.startCol * canvasState.gridSize;
+      const startY = selection.startRow * canvasState.gridSize;
+      const endX = (selection.endCol + 1) * canvasState.gridSize;
+      const endY = (selection.endRow + 1) * canvasState.gridSize;
+      
+      ctx.strokeRect(startX, startY, endX - startX, endY - startY);
+      ctx.setLineDash([]);
+    }
   };
 
   const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, gridSize: number) => {
@@ -439,6 +543,14 @@ export default function PatternDesigner() {
           setCanvasState={setCanvasState}
           onClearCanvas={handleClearCanvas}
           onPatternChange={() => setPatternState(simplePattern.getPattern())}
+          onCopySelection={copySelection}
+          onPasteSelection={() => {
+            const targetRow = selection ? Math.min(selection.startRow, selection.endRow) : 0;
+            const targetCol = selection ? Math.min(selection.startCol, selection.endCol) : 0;
+            pasteSelection(targetRow, targetCol);
+          }}
+          hasSelection={!!selection}
+          hasCopiedSymbols={copiedSymbols.length > 0}
         />
         
         <PatternCanvas
@@ -452,6 +564,9 @@ export default function PatternDesigner() {
           onSymbolErased={handleSymbolErased}
           onRedrawNeeded={redrawCanvas}
           onFillRectangle={handleFillRectangle}
+          onSelectionStart={handleSelectionStart}
+          onSelectionUpdate={handleSelectionUpdate}
+          onSelectionEnd={handleSelectionEnd}
           canUndo={simplePattern.canUndo()}
           canRedo={simplePattern.canRedo()}
         />

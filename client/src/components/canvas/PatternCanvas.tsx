@@ -15,16 +15,20 @@ interface PatternCanvasProps {
   onSymbolErased: (row: number, col: number) => void;
   onRedrawNeeded: () => void;
   onFillRectangle: (startRow: number, startCol: number, endRow: number, endCol: number, symbol: string, color: string) => void;
+  onSelectionStart?: (row: number, col: number) => void;
+  onSelectionUpdate?: (row: number, col: number) => void;
+  onSelectionEnd?: () => void;
   canUndo: boolean;
   canRedo: boolean;
 }
 
 const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
-  ({ canvasState, onUndo, onRedo, onClearCanvas, onSaveToHistory, onSymbolPlaced, onSymbolErased, onRedrawNeeded, onFillRectangle, canUndo, canRedo }, ref) => {
+  ({ canvasState, onUndo, onRedo, onClearCanvas, onSaveToHistory, onSymbolPlaced, onSymbolErased, onRedrawNeeded, onFillRectangle, onSelectionStart, onSelectionUpdate, onSelectionEnd, canUndo, canRedo }, ref) => {
     const [isDrawing, setIsDrawing] = useState(false);
     const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
     const [hoverGridPos, setHoverGridPos] = useState<{ x: number; y: number } | null>(null);
     const [fillStartPos, setFillStartPos] = useState<{ x: number; y: number } | null>(null);
+    const [isSelecting, setIsSelecting] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Calculate dynamic canvas dimensions
@@ -104,13 +108,15 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
       if (!ctx) return;
 
       const pos = getCanvasCoordinates(e);
-      setIsDrawing(true);
+      const gridCol = Math.floor(pos.x / canvasState.gridSize);
+      const gridRow = Math.floor(pos.y / canvasState.gridSize);
       setLastPos(pos);
 
-      if (canvasState.tool === 'fill' && canvasState.symbol) {
+      if (canvasState.tool === 'select') {
+        setIsSelecting(true);
+        onSelectionStart?.(gridRow, gridCol);
+      } else if (canvasState.tool === 'fill' && canvasState.symbol) {
         // Fill tool - two-click operation
-        const gridCol = Math.floor(pos.x / canvasState.gridSize);
-        const gridRow = Math.floor(pos.y / canvasState.gridSize);
         const gridX = gridCol * canvasState.gridSize;
         const gridY = gridRow * canvasState.gridSize;
         
@@ -127,9 +133,8 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
           }, 100);
         }
       } else if (canvasState.tool === 'pen' && canvasState.symbol) {
+        setIsDrawing(true);
         // Snap to grid center - better alignment
-        const gridCol = Math.floor(pos.x / canvasState.gridSize);
-        const gridRow = Math.floor(pos.y / canvasState.gridSize);
         const gridX = gridCol * canvasState.gridSize + canvasState.gridSize / 2;
         const gridY = gridRow * canvasState.gridSize + canvasState.gridSize / 2;
         
@@ -140,10 +145,8 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
         }
       // No freehand drawing - pen tool only works with symbols
       } else if (canvasState.tool === 'eraser') {
+        setIsDrawing(true);
         // Smart erasing - remove symbol and redraw
-        const gridCol = Math.floor(pos.x / canvasState.gridSize);
-        const gridRow = Math.floor(pos.y / canvasState.gridSize);
-        
         onSymbolErased(gridRow, gridCol);
         onRedrawNeeded();
       }
@@ -151,20 +154,19 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
 
     const handleDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
       e.preventDefault();
-      if (!isDrawing) return;
-
-      const canvas = ref as React.RefObject<HTMLCanvasElement>;
-      if (!canvas.current) return;
-
-      const ctx = canvas.current.getContext('2d');
-      if (!ctx) return;
-
       const pos = getCanvasCoordinates(e);
+      const gridCol = Math.floor(pos.x / canvasState.gridSize);
+      const gridRow = Math.floor(pos.y / canvasState.gridSize);
 
-      if (canvasState.tool === 'pen' && canvasState.symbol) {
+      if (isSelecting && canvasState.tool === 'select') {
+        onSelectionUpdate?.(gridRow, gridCol);
+      } else if (isDrawing && canvasState.tool === 'pen' && canvasState.symbol) {
+        const canvas = ref as React.RefObject<HTMLCanvasElement>;
+        if (!canvas.current) return;
+        const ctx = canvas.current.getContext('2d');
+        if (!ctx) return;
+
         // Continuous symbol placement on grid
-        const gridCol = Math.floor(pos.x / canvasState.gridSize);
-        const gridRow = Math.floor(pos.y / canvasState.gridSize);
         const gridX = gridCol * canvasState.gridSize + canvasState.gridSize / 2;
         const gridY = gridRow * canvasState.gridSize + canvasState.gridSize / 2;
         
@@ -176,11 +178,8 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
           drawCrochetSymbol(ctx, canvasState.symbol, gridX, gridY, canvasState.color, canvasState.gridSize);
           onSymbolPlaced(gridRow, gridCol, canvasState.symbol, canvasState.color);
         }
-      } else if (canvasState.tool === 'eraser') {
+      } else if (isDrawing && canvasState.tool === 'eraser') {
         // Continuous smart erasing
-        const gridCol = Math.floor(pos.x / canvasState.gridSize);
-        const gridRow = Math.floor(pos.y / canvasState.gridSize);
-        
         // Only erase if we moved to a different grid cell
         const currentGridKey = `${gridRow}-${gridCol}`;
         const lastGridKey = `${Math.floor(lastPos.y / canvasState.gridSize)}-${Math.floor(lastPos.x / canvasState.gridSize)}`;
@@ -256,9 +255,14 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
 
     const handleStopDrawing = (e?: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
       if (e) e.preventDefault();
-      if (isDrawing && (canvasState.tool === 'pen' || canvasState.tool === 'eraser')) {
+      
+      if (isSelecting) {
+        setIsSelecting(false);
+        onSelectionEnd?.();
+      } else if (isDrawing && (canvasState.tool === 'pen' || canvasState.tool === 'eraser')) {
         onSaveToHistory();
       }
+      
       setIsDrawing(false);
     };
 
