@@ -375,7 +375,7 @@ export default function PatternDesigner() {
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden min-h-0 md:flex-row flex-col">
+      <div className="flex flex-1 overflow-hidden min-h-0 flex-col md:flex-row">
         <ToolSidebar
           canvasState={canvasState}
           setCanvasState={setCanvasState}

@@ -43,7 +43,7 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
   ];
 
   return (
-    <div className="w-72 min-w-0 flex-shrink-0 bg-white border-r border-craft-200 p-4 overflow-y-auto max-h-screen md:w-72 sm:w-64 xs:w-56">
+    <div className="w-full md:w-72 min-w-0 flex-shrink-0 bg-white border-r border-craft-200 p-4 overflow-y-auto md:max-h-full max-h-64">
       {/* Drawing Tools */}
       <div className="mb-6">
         <h3 className="text-sm font-medium text-craft-700 mb-3">Drawing Tools</h3>

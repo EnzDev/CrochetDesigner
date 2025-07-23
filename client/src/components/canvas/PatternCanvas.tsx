@@ -283,7 +283,7 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
     };
 
     return (
-      <div className="flex-1 flex flex-col bg-craft-50">
+      <div className="flex-1 flex flex-col bg-craft-50 min-h-0">
         {/* Canvas Toolbar */}
         <div className="bg-white border-b border-craft-200 px-4 py-3">
           <div className="flex items-center justify-between">
@@ -342,20 +342,16 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
 
         {/* Canvas Area with Dedicated Scrollbars */}
         <div 
-          className="flex-1 overflow-auto bg-craft-50" 
+          className="flex-1 overflow-auto bg-craft-50 min-h-0 canvas-container mobile-scroll-fix" 
           ref={containerRef}
-          style={{
-            scrollbarWidth: 'auto',
-            scrollbarColor: '#cbd5e1 #f1f5f9'
-          }}
         >
-          <div className="p-6 min-w-fit min-h-fit">
-            <div className="bg-white rounded-lg shadow-sm border border-craft-200 p-6 inline-block">
-              <div className="relative">
+          <div className="p-2 md:p-6 w-fit h-fit">
+            <div className="bg-white rounded-lg shadow-sm border border-craft-200 p-2 md:p-6 w-fit h-fit">
+              <div className="relative w-fit h-fit">
                 <canvas
                   ref={ref}
                   className={cn(
-                    "border border-craft-300 rounded-lg block",
+                    "border border-craft-300 rounded-lg block touch-none",
                     canvasState.tool === 'pen' && canvasState.symbol 
                       ? "cursor-pointer" 
                       : canvasState.tool === 'fill' && canvasState.symbol
@@ -367,10 +363,11 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
                   width={canvasWidth}
                   height={canvasHeight}
                   style={{
+                    display: 'block',
                     width: `${canvasWidth}px`,
                     height: `${canvasHeight}px`,
-                    minWidth: `${canvasWidth}px`,
-                    minHeight: `${canvasHeight}px`
+                    maxWidth: 'none',
+                    maxHeight: 'none'
                   }}
                   onMouseDown={handleStartDrawing}
                   onMouseMove={handleMouseMove}

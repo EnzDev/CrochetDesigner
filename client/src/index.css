@@ -217,3 +217,15 @@
 ::-webkit-scrollbar-thumb:hover {
   background: var(--craft-400);
 }
+
+/* Mobile canvas scrolling improvements */
+.canvas-container {
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: auto;
+}
+
+.mobile-scroll-fix {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
