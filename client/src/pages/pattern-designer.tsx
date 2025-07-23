@@ -59,13 +59,6 @@ export default function PatternDesigner() {
 
   // Handle symbol placement to expand rows (crochet grows upward)
   const handleSymbolPlaced = (row: number, col: number, symbol: string, color: string) => {
-    const cellKey = `${row}-${col}`;
-    setGridSymbols(prev => {
-      const newMap = new Map(prev);
-      newMap.set(cellKey, { symbol, color });
-      return newMap;
-    });
-    
     // If placing on the top row (row 0), add a new row above and shift everything down
     if (row === 0) {
       setCanvasState(prev => ({
@@ -73,15 +66,28 @@ export default function PatternDesigner() {
         canvasRows: prev.canvasRows + 1
       }));
       
-      // Shift all existing symbols down by one row
+      // Shift all existing symbols down by one row and add the new symbol
       setGridSymbols(prev => {
         const newMap = new Map();
+        
+        // First, shift all existing symbols down by one row
         prev.forEach((symbolData, key) => {
           const [oldRow, oldCol] = key.split('-').map(Number);
           const newKey = `${oldRow + 1}-${oldCol}`;
           newMap.set(newKey, symbolData);
         });
-        // Add the new symbol at row 0
+        
+        // Then add the new symbol at row 0 (the new top row)
+        const cellKey = `0-${col}`;
+        newMap.set(cellKey, { symbol, color });
+        
+        return newMap;
+      });
+    } else {
+      // Regular placement on existing rows
+      const cellKey = `${row}-${col}`;
+      setGridSymbols(prev => {
+        const newMap = new Map(prev);
         newMap.set(cellKey, { symbol, color });
         return newMap;
       });
