@@ -29,6 +29,8 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
     { id: 'tr', label: 'TR', preview: 'tr' },
     { id: 'sl', label: 'SL ST', preview: 'sl' },
     { id: 'yo', label: 'YO', preview: 'yo' },
+    { id: '2dctog', label: '2DC Tog', preview: '2tog' },
+    { id: '3dctog', label: '3DC Tog', preview: '3tog' },
   ];
 
   const colors = [

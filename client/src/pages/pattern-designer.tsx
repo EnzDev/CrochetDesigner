@@ -108,6 +108,9 @@ export default function PatternDesigner() {
     
     // Draw symbols from pattern state
     patternState.symbols.forEach((symbol) => {
+      // Skip occupied markers - only draw actual symbols
+      if (symbol.symbol === 'occupied') return;
+      
       const x = symbol.col * canvasState.gridSize + canvasState.gridSize / 2;
       const y = symbol.row * canvasState.gridSize + canvasState.gridSize / 2;
       

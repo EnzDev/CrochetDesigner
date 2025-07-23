@@ -42,6 +42,18 @@ export const crochetSymbols: CrochetSymbol[] = [
     abbreviation: 'yo',
     description: 'Yarn over',
   },
+  {
+    id: '2dctog',
+    name: '2 Double Crochet Together',
+    abbreviation: '2dc tog',
+    description: 'Two double crochet stitches worked together (decrease)',
+  },
+  {
+    id: '3dctog',
+    name: '3 Double Crochet Together',
+    abbreviation: '3dc tog',
+    description: 'Three double crochet stitches worked together (decrease)',
+  },
 ];
 
 export function drawCrochetSymbol(
@@ -123,6 +135,49 @@ export function drawCrochetSymbol(
       ctx.stroke();
       break;
 
+    case '2dctog':
+      // 2 DC together - two vertical lines converging at top
+      ctx.beginPath();
+      // Left DC line
+      ctx.moveTo(centerX - size * 0.3, y + size * 0.9);
+      ctx.lineTo(centerX - size * 0.3, y + size * 0.3);
+      ctx.lineTo(centerX, y + size * 0.1);
+      // Right DC line
+      ctx.moveTo(centerX + size * 0.3, y + size * 0.9);
+      ctx.lineTo(centerX + size * 0.3, y + size * 0.3);
+      ctx.lineTo(centerX, y + size * 0.1);
+      // Cross lines
+      ctx.moveTo(centerX - size * 0.3, y + size * 0.5);
+      ctx.lineTo(centerX - size * 0.1, y + size * 0.4);
+      ctx.moveTo(centerX + size * 0.1, y + size * 0.4);
+      ctx.lineTo(centerX + size * 0.3, y + size * 0.5);
+      ctx.stroke();
+      break;
+
+    case '3dctog':
+      // 3 DC together - three vertical lines converging at top
+      ctx.beginPath();
+      // Left DC line
+      ctx.moveTo(centerX - size * 0.4, y + size * 0.9);
+      ctx.lineTo(centerX - size * 0.4, y + size * 0.3);
+      ctx.lineTo(centerX, y + size * 0.1);
+      // Middle DC line
+      ctx.moveTo(centerX, y + size * 0.9);
+      ctx.lineTo(centerX, y + size * 0.2);
+      // Right DC line
+      ctx.moveTo(centerX + size * 0.4, y + size * 0.9);
+      ctx.lineTo(centerX + size * 0.4, y + size * 0.3);
+      ctx.lineTo(centerX, y + size * 0.1);
+      // Cross lines
+      ctx.moveTo(centerX - size * 0.4, y + size * 0.5);
+      ctx.lineTo(centerX - size * 0.25, y + size * 0.4);
+      ctx.moveTo(centerX - size * 0.15, y + size * 0.45);
+      ctx.lineTo(centerX + size * 0.15, y + size * 0.45);
+      ctx.moveTo(centerX + size * 0.25, y + size * 0.4);
+      ctx.lineTo(centerX + size * 0.4, y + size * 0.5);
+      ctx.stroke();
+      break;
+
     default:
       // Draw a small dot for unknown symbols
       ctx.beginPath();
@@ -136,4 +191,16 @@ export function drawCrochetSymbol(
 
 export function getSymbolById(id: string): CrochetSymbol | undefined {
   return crochetSymbols.find(symbol => symbol.id === id);
+}
+
+// Get the width of a symbol in grid cells (for multi-cell symbols)
+export function getSymbolWidth(symbolId: string): number {
+  switch (symbolId) {
+    case '2dctog':
+      return 2;
+    case '3dctog':
+      return 3;
+    default:
+      return 1;
+  }
 }

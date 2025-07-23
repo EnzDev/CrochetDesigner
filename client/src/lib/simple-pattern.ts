@@ -5,6 +5,8 @@ export interface SimpleSymbol {
   col: number;
   symbol: string;
   color: string;
+  width?: number; // For multi-cell symbols like 2dctog, 3dctog
+  occupiedBy?: { row: number; col: number }; // For cells occupied by multi-cell symbols
 }
 
 export interface SimplePattern {
@@ -37,23 +39,96 @@ export class SimplePatternManager {
 
   // Place a symbol
   placeSymbol(row: number, col: number, symbol: string, color: string): void {
-    // Remove any existing symbol at this position
-    this.pattern.symbols = this.pattern.symbols.filter(s => 
-      !(s.row === row && s.col === col)
-    );
+    // Get symbol width for multi-cell symbols
+    const getSymbolWidth = (symbolId: string): number => {
+      switch (symbolId) {
+        case '2dctog': return 2;
+        case '3dctog': return 3;
+        default: return 1;
+      }
+    };
+    
+    const symbolWidth = getSymbolWidth(symbol);
+    
+    // Ensure grid is large enough
+    if (row >= this.pattern.rows) this.pattern.rows = row + 1;
+    if (col + symbolWidth > this.pattern.cols) this.pattern.cols = col + symbolWidth;
+    
+    // Remove any existing symbols in the range this symbol will occupy
+    for (let i = 0; i < symbolWidth; i++) {
+      this.pattern.symbols = this.pattern.symbols.filter(s => 
+        !(s.row === row && s.col === col + i)
+      );
+    }
+    
+    // Also remove any symbols that this position might be occupied by
+    this.pattern.symbols = this.pattern.symbols.filter(s => {
+      if (s.occupiedBy && s.occupiedBy.row === row && s.occupiedBy.col <= col && col < s.occupiedBy.col + (s.width || 1)) {
+        return false; // Remove the occupied cell
+      }
+      return true;
+    });
 
-    // Add the new symbol
-    this.pattern.symbols.push({ row, col, symbol, color });
+    // Add the main symbol
+    this.pattern.symbols.push({ row, col, symbol, color, width: symbolWidth });
+    
+    // Add occupied markers for multi-cell symbols
+    for (let i = 1; i < symbolWidth; i++) {
+      this.pattern.symbols.push({ 
+        row, 
+        col: col + i, 
+        symbol: 'occupied', 
+        color, 
+        occupiedBy: { row, col } 
+      });
+    }
   }
 
   // Remove a symbol
   removeSymbol(row: number, col: number): boolean {
     const initialLength = this.pattern.symbols.length;
-    this.pattern.symbols = this.pattern.symbols.filter(s => 
-      !(s.row === row && s.col === col)
+    
+    // Find if this position is occupied by a multi-cell symbol
+    const occupiedSymbol = this.pattern.symbols.find(s => 
+      s.occupiedBy && s.occupiedBy.row === row && s.occupiedBy.col <= col && 
+      col < s.occupiedBy.col + (this.getSymbolAt(s.occupiedBy.row, s.occupiedBy.col)?.width || 1)
     );
+    
+    if (occupiedSymbol && occupiedSymbol.occupiedBy) {
+      // Remove the main symbol and all its occupied cells
+      const mainSymbol = this.getSymbolAt(occupiedSymbol.occupiedBy.row, occupiedSymbol.occupiedBy.col);
+      if (mainSymbol) {
+        const symbolWidth = mainSymbol.width || 1;
+        for (let i = 0; i < symbolWidth; i++) {
+          this.pattern.symbols = this.pattern.symbols.filter(s => 
+            !(s.row === occupiedSymbol.occupiedBy!.row && s.col === occupiedSymbol.occupiedBy!.col + i)
+          );
+        }
+      }
+    } else {
+      // Remove the symbol at this position and any occupied cells it controls
+      const symbolAtPos = this.getSymbolAt(row, col);
+      if (symbolAtPos && symbolAtPos.width && symbolAtPos.width > 1) {
+        // Multi-cell symbol - remove all occupied cells
+        for (let i = 0; i < symbolAtPos.width; i++) {
+          this.pattern.symbols = this.pattern.symbols.filter(s => 
+            !(s.row === row && s.col === col + i)
+          );
+        }
+      } else {
+        // Single cell symbol
+        this.pattern.symbols = this.pattern.symbols.filter(s => 
+          !(s.row === row && s.col === col)
+        );
+      }
+    }
 
     return this.pattern.symbols.length < initialLength;
+  }
+  
+  // Helper method to get symbol at position
+  private getSymbolAt(row: number, col: number): SimpleSymbol | undefined {
+    return this.pattern.symbols.find(s => s.row === row && s.col === col);
   }
 
   // Manual grid size controls
