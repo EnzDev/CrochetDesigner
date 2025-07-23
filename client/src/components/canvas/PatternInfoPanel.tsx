@@ -66,7 +66,7 @@ export default function PatternInfoPanel({ patternInfo, setPatternInfo }: Patter
   };
 
   return (
-    <div className="w-80 bg-white border-l border-craft-200 p-4 overflow-y-auto">
+    <div className="w-80 min-w-0 flex-shrink-0 bg-white border-l border-craft-200 p-4 overflow-y-auto max-h-screen md:w-80 sm:w-72 xs:w-64">
       <h3 className="text-lg font-medium text-craft-800 mb-4">Pattern Information</h3>
       
       <div className="space-y-4">

@@ -39,11 +39,11 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
   ];
 
   return (
-    <div className="w-72 bg-white border-r border-craft-200 p-4 overflow-y-auto">
+    <div className="w-72 min-w-0 flex-shrink-0 bg-white border-r border-craft-200 p-4 overflow-y-auto max-h-screen md:w-72 sm:w-64 xs:w-56">
       {/* Drawing Tools */}
       <div className="mb-6">
         <h3 className="text-sm font-medium text-craft-700 mb-3">Drawing Tools</h3>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
           {tools.map((tool) => {
             const Icon = tool.icon;
             return (
@@ -51,7 +51,7 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
                 key={tool.id}
                 variant="outline"
                 className={cn(
-                  "p-3 h-auto flex-col gap-1 text-center transition-colors",
+                  "p-3 h-auto flex-col gap-1 text-center transition-colors touch-manipulation active:scale-95",
                   canvasState.tool === tool.id
                     ? "bg-accent text-white border-accent"
                     : "border-craft-200 hover:border-accent"
@@ -69,13 +69,13 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
       {/* Crochet Symbols */}
       <div className="mb-6">
         <h3 className="text-sm font-medium text-craft-700 mb-3">Crochet Symbols</h3>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-2 md:grid-cols-3">
           {symbols.map((symbol) => (
             <Button
               key={symbol.id}
               variant="outline"
               className={cn(
-                "p-3 h-auto flex-col gap-1 text-center transition-all hover:scale-105",
+                "p-3 h-auto flex-col gap-1 text-center transition-all hover:scale-105 touch-manipulation active:scale-95",
                 canvasState.symbol === symbol.id
                   ? "bg-accent/10 border-accent"
                   : "border-craft-200 hover:border-accent hover:bg-accent/5"
@@ -100,12 +100,12 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
       {/* Color Palette */}
       <div className="mb-6">
         <h3 className="text-sm font-medium text-craft-700 mb-3">Yarn Colors</h3>
-        <div className="grid grid-cols-6 gap-2">
+        <div className="grid grid-cols-6 gap-2 sm:grid-cols-4 md:grid-cols-6">
           {colors.map((color) => (
             <button
               key={color.value}
               className={cn(
-                "w-8 h-8 rounded-full shadow-sm border-2 transition-transform hover:scale-110",
+                "w-8 h-8 rounded-full shadow-sm border-2 transition-transform hover:scale-110 touch-manipulation active:scale-95",
                 canvasState.color === color.value
                   ? "border-craft-800 ring-2 ring-accent"
                   : "border-craft-300"

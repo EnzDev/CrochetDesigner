@@ -34,7 +34,7 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
     }, [canvasState.showGrid, canvasState.gridSize, ref]);
 
     const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, gridSize: number) => {
-      ctx.strokeStyle = 'rgba(229, 231, 235, 0.8)';
+      ctx.strokeStyle = 'rgba(156, 163, 175, 0.6)';
       ctx.lineWidth = 1;
       
       for (let x = 0; x <= width; x += gridSize) {
@@ -52,7 +52,7 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
       }
     };
 
-    const getCanvasCoordinates = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const getCanvasCoordinates = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
       const canvas = ref as React.RefObject<HTMLCanvasElement>;
       if (!canvas.current) return { x: 0, y: 0 };
 
@@ -60,13 +60,27 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
       const scaleX = canvas.current.width / rect.width;
       const scaleY = canvas.current.height / rect.height;
 
+      let clientX: number, clientY: number;
+      
+      if ('touches' in e) {
+        // Touch event
+        const touch = e.touches[0] || e.changedTouches[0];
+        clientX = touch.clientX;
+        clientY = touch.clientY;
+      } else {
+        // Mouse event
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+
       return {
-        x: (e.clientX - rect.left) * scaleX,
-        y: (e.clientY - rect.top) * scaleY,
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY,
       };
     };
 
-    const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const handleStartDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+      e.preventDefault();
       const canvas = ref as React.RefObject<HTMLCanvasElement>;
       if (!canvas.current) return;
 
@@ -93,7 +107,8 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
       }
     };
 
-    const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const handleDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+      e.preventDefault();
       if (!isDrawing) return;
 
       const canvas = ref as React.RefObject<HTMLCanvasElement>;
@@ -120,7 +135,8 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
       setLastPos(pos);
     };
 
-    const handleMouseUp = () => {
+    const handleStopDrawing = (e?: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+      if (e) e.preventDefault();
       if (isDrawing && canvasState.tool === 'pen' && !canvasState.symbol) {
         onSaveToHistory();
       }
@@ -202,10 +218,14 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
                 className="border border-craft-300 rounded-lg cursor-crosshair"
                 width={800}
                 height={600}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
+                onMouseDown={handleStartDrawing}
+                onMouseMove={handleDrawing}
+                onMouseUp={handleStopDrawing}
+                onMouseLeave={handleStopDrawing}
+                onTouchStart={handleStartDrawing}
+                onTouchMove={handleDrawing}
+                onTouchEnd={handleStopDrawing}
+                onTouchCancel={handleStopDrawing}
               />
               
               {/* Canvas overlay for info */}

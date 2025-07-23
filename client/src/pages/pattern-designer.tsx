@@ -193,7 +193,7 @@ export default function PatternDesigner() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         // Redraw grid if enabled
         if (canvasState.showGrid) {
-          ctx.strokeStyle = 'rgba(229, 231, 235, 0.8)';
+          ctx.strokeStyle = 'rgba(156, 163, 175, 0.6)';
           ctx.lineWidth = 1;
           
           for (let x = 0; x <= canvas.width; x += canvasState.gridSize) {
@@ -266,7 +266,7 @@ export default function PatternDesigner() {
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden min-h-0 md:flex-row flex-col">
         <ToolSidebar
           canvasState={canvasState}
           setCanvasState={setCanvasState}
