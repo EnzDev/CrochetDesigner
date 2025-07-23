@@ -216,14 +216,25 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
       const minRow = Math.min(startRow, endRow);
       const maxRow = Math.max(startRow, endRow);
       
-      for (let col = minCol; col <= maxCol; col++) {
-        for (let row = minRow; row <= maxRow; row++) {
-          const symbolX = col * canvasState.gridSize + canvasState.gridSize / 2;
-          const symbolY = row * canvasState.gridSize + canvasState.gridSize / 2;
-          drawCrochetSymbol(ctx, canvasState.symbol, symbolX, symbolY, canvasState.color, canvasState.gridSize);
-          onSymbolPlaced(row, col, canvasState.symbol, canvasState.color);
+      // Collect all positions to fill first
+      const positions: { row: number; col: number }[] = [];
+      for (let row = minRow; row <= maxRow; row++) {
+        for (let col = minCol; col <= maxCol; col++) {
+          positions.push({ row, col });
         }
       }
+      
+      // Draw all symbols first
+      positions.forEach(({ row, col }) => {
+        const symbolX = col * canvasState.gridSize + canvasState.gridSize / 2;
+        const symbolY = row * canvasState.gridSize + canvasState.gridSize / 2;
+        drawCrochetSymbol(ctx, canvasState.symbol, symbolX, symbolY, canvasState.color, canvasState.gridSize);
+      });
+      
+      // Then notify about symbol placements (this triggers row expansion if needed)
+      positions.forEach(({ row, col }) => {
+        onSymbolPlaced(row, col, canvasState.symbol, canvasState.color);
+      });
     };
 
     const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {

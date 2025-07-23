@@ -72,14 +72,19 @@ export default function PatternDesigner() {
       return newMap;
     });
     
-    // Check if we need to add more rows (when placing in the second row from top)
+    // Check if we need to add more rows (when working on the top 2 rows)
     if (row <= 1) {
+      // Use a more aggressive approach for row expansion to ensure fill works
       setTimeout(() => {
-        setCanvasState(prev => ({
-          ...prev,
-          canvasRows: prev.canvasRows + 1
-        }));
-      }, 50); // Wait a bit for the symbol placement to complete
+        setCanvasState(prev => {
+          // Add 2 rows if we're working on the very top row to give more space
+          const rowsToAdd = row === 0 ? 2 : 1;
+          return {
+            ...prev,
+            canvasRows: prev.canvasRows + rowsToAdd
+          };
+        });
+      }, 10); // Shorter delay for faster response
     }
   };
 
