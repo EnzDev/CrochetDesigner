@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Undo2, Redo2, Trash2, ZoomIn, ZoomOut } from "lucide-react";
 import { drawCrochetSymbol } from "@/lib/crochet-symbols";
 import type { CanvasState } from "@/pages/pattern-designer";
+import { cn } from "@/lib/utils";
 
 interface PatternCanvasProps {
   canvasState: CanvasState;
@@ -21,6 +22,7 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
     const [hoverGridPos, setHoverGridPos] = useState<{ x: number; y: number } | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
+    // Separate effect for grid drawing only
     useEffect(() => {
       const canvas = ref as React.RefObject<HTMLCanvasElement>;
       if (!canvas.current) return;
@@ -28,23 +30,13 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
       const ctx = canvas.current.getContext('2d');
       if (!ctx) return;
 
-      // Clear and redraw everything
-      ctx.clearRect(0, 0, canvas.current.width, canvas.current.height);
-      
-      // Draw grid
+      // Only redraw grid when grid settings change
       if (canvasState.showGrid) {
         drawGrid(ctx, canvas.current.width, canvas.current.height, canvasState.gridSize);
       }
-      
-      // Draw hover highlight
-      if (hoverGridPos && canvasState.tool === 'pen' && canvasState.symbol) {
-        ctx.fillStyle = 'rgba(59, 130, 246, 0.1)';
-        ctx.fillRect(hoverGridPos.x, hoverGridPos.y, canvasState.gridSize, canvasState.gridSize);
-        ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(hoverGridPos.x, hoverGridPos.y, canvasState.gridSize, canvasState.gridSize);
-      }
-    }, [canvasState.showGrid, canvasState.gridSize, hoverGridPos, canvasState.tool, canvasState.symbol, ref]);
+    }, [canvasState.showGrid, canvasState.gridSize, ref]);
+
+
 
     const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, gridSize: number) => {
       ctx.strokeStyle = 'rgba(156, 163, 175, 0.6)';
@@ -153,15 +145,20 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
     const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
       const pos = getCanvasCoordinates(e);
       
-      // Update hover grid position for visual feedback
-      if (canvasState.tool === 'pen' && canvasState.symbol) {
+      // Simple hover feedback via CSS cursor change
+      if (canvasState.tool === 'pen' && canvasState.symbol && !isDrawing) {
         const gridCol = Math.floor(pos.x / canvasState.gridSize);
         const gridRow = Math.floor(pos.y / canvasState.gridSize);
         const gridX = gridCol * canvasState.gridSize;
         const gridY = gridRow * canvasState.gridSize;
         
-        setHoverGridPos({ x: gridX, y: gridY });
-      } else {
+        const newHoverPos = { x: gridX, y: gridY };
+        
+        // Only update if position changed (no visual rendering to avoid glitch)
+        if (!hoverGridPos || hoverGridPos.x !== newHoverPos.x || hoverGridPos.y !== newHoverPos.y) {
+          setHoverGridPos(newHoverPos);
+        }
+      } else if (hoverGridPos) {
         setHoverGridPos(null);
       }
       
@@ -249,7 +246,12 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
             <div className="relative">
               <canvas
                 ref={ref}
-                className="border border-craft-300 rounded-lg cursor-crosshair"
+                className={cn(
+                  "border border-craft-300 rounded-lg",
+                  canvasState.tool === 'pen' && canvasState.symbol 
+                    ? "cursor-pointer" 
+                    : "cursor-crosshair"
+                )}
                 width={800}
                 height={600}
                 onMouseDown={handleStartDrawing}
