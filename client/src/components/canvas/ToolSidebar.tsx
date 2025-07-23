@@ -337,6 +337,19 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
                 variant="outline"
                 size="sm"
                 onClick={() => {
+                  if (simplePattern.removeColumnLeft()) {
+                    onPatternChange();
+                  }
+                }}
+                className="flex-1"
+              >
+                <Minus className="w-3 h-3 mr-1" />
+                Remove Left
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
                   if (simplePattern.removeColumnRight()) {
                     simplePattern.saveToHistory();
                     onPatternChange();

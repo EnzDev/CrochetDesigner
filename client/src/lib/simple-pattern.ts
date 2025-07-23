@@ -178,8 +178,16 @@ export class SimplePatternManager {
     this.saveToHistory();
   }
 
-  // Add column to the left (negative numbering)
+  // Add column to the left (shift existing symbols right)
   addColumnLeft(): void {
+    // Shift all existing symbols one column to the right
+    this.pattern.symbols.forEach(symbol => {
+      symbol.col += 1;
+      if (symbol.occupiedBy) {
+        symbol.occupiedBy.col += 1;
+      }
+    });
+    // Decrease starting column to maintain grid numbering
     this.pattern.startCol--;
     this.pattern.cols++;
     this.saveToHistory();
@@ -192,6 +200,28 @@ export class SimplePatternManager {
     this.pattern.symbols = this.pattern.symbols.filter(s => s.col !== this.pattern.cols - 1);
     
     this.pattern.cols--;
+    return true;
+  }
+
+  // Remove column from the left (shift existing symbols left)
+  removeColumnLeft(): boolean {
+    if (this.pattern.cols <= 1) return false;
+    
+    // Remove symbols from leftmost column (column 0)
+    this.pattern.symbols = this.pattern.symbols.filter(s => s.col !== 0);
+    
+    // Shift remaining symbols one column to the left
+    this.pattern.symbols.forEach(symbol => {
+      symbol.col -= 1;
+      if (symbol.occupiedBy) {
+        symbol.occupiedBy.col -= 1;
+      }
+    });
+    
+    // Increase starting column to maintain grid numbering
+    this.pattern.startCol++;
+    this.pattern.cols--;
+    this.saveToHistory();
     return true;
   }
 

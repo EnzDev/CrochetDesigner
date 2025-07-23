@@ -26,6 +26,10 @@ Priority: Fix top row drawing issues - critical for crochet pattern construction
   - Added grid numbering at 10s and 50s for enhanced grid styles
   - Set chain as default symbol and removed unreliable freehand drawing
   - Pen tool now only works with crochet symbols for consistent behavior
+  - Implemented negative column numbering system with leftward expansion
+  - Added startCol tracking and proper symbol shifting for left column operations
+  - Purple "START" line marks column 0 reference point
+  - Add/Remove Left buttons properly shift existing stitches physically
 
 ## System Architecture
 
