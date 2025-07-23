@@ -163,6 +163,58 @@ export default function PatternDesigner() {
       ctx.lineTo(width, y);
       ctx.stroke();
     }
+
+    // Draw grid numbers when enhanced grid is enabled
+    if (canvasState.gridStyle !== 'basic') {
+      ctx.font = `${Math.max(10, gridSize * 0.4)}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      
+      // Column numbers (below first row)
+      for (let x = 0; x <= width; x += gridSize) {
+        const colIndex = x / gridSize;
+        
+        if (colIndex > 0 && (colIndex % 10 === 0 || (canvasState.gridStyle === 'every50' && colIndex % 50 === 0))) {
+          // Set text color based on line type
+          if (canvasState.gridStyle === 'every50' && colIndex % 50 === 0) {
+            ctx.fillStyle = '#dc2626'; // Darker red for 50s
+          } else {
+            ctx.fillStyle = '#0f766e'; // Darker teal for 10s
+          }
+          
+          // Draw number below the first row
+          ctx.fillText(
+            colIndex.toString(),
+            x,
+            gridSize + 2
+          );
+        }
+      }
+      
+      // Row numbers (to the left of first column)
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      
+      for (let y = 0; y <= height; y += gridSize) {
+        const rowIndex = y / gridSize;
+        
+        if (rowIndex > 0 && (rowIndex % 10 === 0 || (canvasState.gridStyle === 'every50' && rowIndex % 50 === 0))) {
+          // Set text color based on line type
+          if (canvasState.gridStyle === 'every50' && rowIndex % 50 === 0) {
+            ctx.fillStyle = '#dc2626'; // Darker red for 50s
+          } else {
+            ctx.fillStyle = '#0f766e'; // Darker teal for 10s
+          }
+          
+          // Draw number to the left of first column
+          ctx.fillText(
+            rowIndex.toString(),
+            -2,
+            y + gridSize / 2
+          );
+        }
+      }
+    }
   };
 
   const handleSaveCanvas = async () => {
