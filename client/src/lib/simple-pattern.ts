@@ -14,6 +14,7 @@ export interface SimplePattern {
   rows: number;
   cols: number;
   gridSize: number;
+  startCol: number; // Starting column offset (can be negative)
 }
 
 export class SimplePatternManager {
@@ -27,7 +28,8 @@ export class SimplePatternManager {
       symbols: [],
       rows,
       cols,
-      gridSize
+      gridSize,
+      startCol: 0 // Start at column 0
     };
     this.saveToHistory();
   }
@@ -173,6 +175,14 @@ export class SimplePatternManager {
 
   addColumnRight(): void {
     this.pattern.cols++;
+    this.saveToHistory();
+  }
+
+  // Add column to the left (negative numbering)
+  addColumnLeft(): void {
+    this.pattern.startCol--;
+    this.pattern.cols++;
+    this.saveToHistory();
   }
 
   removeColumnRight(): boolean {
@@ -230,7 +240,8 @@ export class SimplePatternManager {
       symbols: [],
       rows: 3,
       cols: this.pattern.cols,
-      gridSize: this.pattern.gridSize
+      gridSize: this.pattern.gridSize,
+      startCol: 0
     };
   }
 
@@ -249,7 +260,8 @@ export class SimplePatternManager {
       symbols: [...this.pattern.symbols],
       rows: this.pattern.rows,
       cols: this.pattern.cols,
-      gridSize: this.pattern.gridSize
+      gridSize: this.pattern.gridSize,
+      startCol: this.pattern.startCol
     });
 
     // Limit history size
@@ -267,7 +279,8 @@ export class SimplePatternManager {
         symbols: [...this.history[this.historyIndex].symbols],
         rows: this.history[this.historyIndex].rows,
         cols: this.history[this.historyIndex].cols,
-        gridSize: this.history[this.historyIndex].gridSize
+        gridSize: this.history[this.historyIndex].gridSize,
+        startCol: this.history[this.historyIndex].startCol
       };
       return true;
     }
@@ -281,7 +294,8 @@ export class SimplePatternManager {
         symbols: [...this.history[this.historyIndex].symbols],
         rows: this.history[this.historyIndex].rows,
         cols: this.history[this.historyIndex].cols,
-        gridSize: this.history[this.historyIndex].gridSize
+        gridSize: this.history[this.historyIndex].gridSize,
+        startCol: this.history[this.historyIndex].startCol
       };
       return true;
     }
@@ -297,23 +311,25 @@ export class SimplePatternManager {
   }
 
   // Load pattern
-  loadPattern(data: { symbols: SimpleSymbol[]; rows: number; cols: number; gridSize: number }): void {
+  loadPattern(data: { symbols: SimpleSymbol[]; rows: number; cols: number; gridSize: number; startCol?: number }): void {
     this.pattern = {
       symbols: [...data.symbols],
       rows: data.rows,
       cols: data.cols,
-      gridSize: data.gridSize
+      gridSize: data.gridSize,
+      startCol: data.startCol || 0
     };
     this.saveToHistory();
   }
 
   // Export pattern
-  exportPattern(): { symbols: SimpleSymbol[]; rows: number; cols: number; gridSize: number } {
+  exportPattern(): { symbols: SimpleSymbol[]; rows: number; cols: number; gridSize: number; startCol: number } {
     return {
       symbols: [...this.pattern.symbols],
       rows: this.pattern.rows,
       cols: this.pattern.cols,
-      gridSize: this.pattern.gridSize
+      gridSize: this.pattern.gridSize,
+      startCol: this.pattern.startCol
     };
   }
 }

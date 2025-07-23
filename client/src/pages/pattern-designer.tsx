@@ -232,13 +232,19 @@ export default function PatternDesigner() {
     
     // Draw vertical lines
     for (let x = 0; x <= width; x += gridSize) {
-      const colIndex = x / gridSize;
+      const physicalCol = x / gridSize;
+      const actualCol = physicalCol + patternState.startCol; // Apply startCol offset
       
-      // Set line style based on grid preferences
-      if (canvasState.gridStyle === 'every50' && colIndex % 50 === 0) {
+      // Special styling for starting column (column 0)
+      let isStartingColumn = false;
+      if (actualCol === 0) {
+        ctx.strokeStyle = '#8b5cf6'; // Purple for starting column
+        ctx.lineWidth = 3;
+        isStartingColumn = true;
+      } else if (canvasState.gridStyle === 'every50' && actualCol % 50 === 0) {
         ctx.strokeStyle = '#ff6b6b'; // Red for every 50
         ctx.lineWidth = 2;
-      } else if (canvasState.gridStyle !== 'basic' && colIndex % 10 === 0) {
+      } else if (canvasState.gridStyle !== 'basic' && actualCol % 10 === 0) {
         ctx.strokeStyle = '#4ecdc4'; // Teal for every 10
         ctx.lineWidth = 1.5;
       } else {
@@ -250,6 +256,15 @@ export default function PatternDesigner() {
       ctx.moveTo(x, 0);
       ctx.lineTo(x, height);
       ctx.stroke();
+      
+      // Add label for starting column
+      if (isStartingColumn) {
+        ctx.font = `${Math.max(12, gridSize * 0.5)}px Arial`;
+        ctx.fillStyle = '#8b5cf6';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText('START', x + 2, 2);
+      }
     }
     
     // Draw horizontal lines
@@ -282,11 +297,12 @@ export default function PatternDesigner() {
       
       // Column numbers (below first row)
       for (let x = 0; x <= width; x += gridSize) {
-        const colIndex = x / gridSize;
+        const physicalCol = x / gridSize;
+        const actualCol = physicalCol + patternState.startCol; // Apply startCol offset
         
-        if (colIndex > 0 && (colIndex % 10 === 0 || (canvasState.gridStyle === 'every50' && colIndex % 50 === 0))) {
+        if (physicalCol > 0 && (actualCol % 10 === 0 || (canvasState.gridStyle === 'every50' && actualCol % 50 === 0))) {
           // Set text color based on line type
-          if (canvasState.gridStyle === 'every50' && colIndex % 50 === 0) {
+          if (canvasState.gridStyle === 'every50' && actualCol % 50 === 0) {
             ctx.fillStyle = '#dc2626'; // Darker red for 50s
           } else {
             ctx.fillStyle = '#0f766e'; // Darker teal for 10s
@@ -294,7 +310,7 @@ export default function PatternDesigner() {
           
           // Draw number below the first row
           ctx.fillText(
-            colIndex.toString(),
+            actualCol.toString(),
             x,
             gridSize + 2
           );
@@ -341,11 +357,12 @@ export default function PatternDesigner() {
         difficulty: patternInfo.difficulty,
         canvasData,
         gridSymbols: Object.fromEntries(
-          patternState.symbols.map(s => [`${s.row}-${s.col}`, { symbol: s.symbol, color: s.color }])
+          patternState.symbols.map(s => [`${s.row}-${s.col}`, { symbol: s.symbol, color: s.color, width: s.width || 1 }])
         ),
         canvasRows: patternState.rows,
         canvasCols: patternState.cols,
         gridSize: patternState.gridSize,
+        startCol: patternState.startCol,
         canvasWidth: canvasRef.current.width,
         canvasHeight: canvasRef.current.height,
       };
@@ -431,7 +448,8 @@ export default function PatternDesigner() {
         symbols,
         rows: pattern.canvasRows || 3,
         cols: pattern.canvasCols || 40,
-        gridSize: pattern.gridSize || 20
+        gridSize: pattern.gridSize || 20,
+        startCol: pattern.startCol || 0
       });
       
       setPatternState(simplePattern.getPattern());

@@ -310,6 +310,18 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
                 variant="outline"
                 size="sm"
                 onClick={() => {
+                  simplePattern.addColumnLeft();
+                  onPatternChange();
+                }}
+                className="flex-1"
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Add Left
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
                   simplePattern.addColumnRight();
                   simplePattern.saveToHistory();
                   onPatternChange();
@@ -319,6 +331,8 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
                 <Plus className="w-3 h-3 mr-1" />
                 Add Right
               </Button>
+            </div>
+            <div className="flex items-center gap-2 mt-2">
               <Button
                 variant="outline"
                 size="sm"
