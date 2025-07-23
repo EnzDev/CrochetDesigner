@@ -125,7 +125,7 @@ export class SimplePatternManager {
   }
 
   setGridSize(gridSize: number): void {
-    if (gridSize < 10 || gridSize > 50) return;
+    if (gridSize < 1 || gridSize > 30) return;
     this.pattern.gridSize = gridSize;
   }
 

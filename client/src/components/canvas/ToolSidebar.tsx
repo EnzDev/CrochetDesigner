@@ -145,20 +145,20 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
           </div>
           
           <div>
-            <Label className="text-sm text-craft-600">Grid Size (px)</Label>
-            <Input
-              type="number"
-              min="10"
-              max="50"
+            <Label className="text-sm text-craft-600">Grid Size: {canvasState.gridSize}px</Label>
+            <input
+              type="range"
+              min="1"
+              max="30"
               value={canvasState.gridSize}
               onChange={(e) => {
-                const value = parseInt(e.target.value) || 20;
+                const value = parseInt(e.target.value);
                 setCanvasState(prev => ({ ...prev, gridSize: value }));
                 // Update the pattern manager grid size
                 simplePattern.setGridSize(value);
                 onPatternChange();
               }}
-              className="mt-1"
+              className="w-full h-2 bg-craft-200 rounded-lg appearance-none cursor-pointer slider mt-2"
             />
           </div>
 
