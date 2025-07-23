@@ -143,7 +143,9 @@ export default function PatternDesigner() {
         yarnWeight: patternInfo.yarnWeight,
         difficulty: patternInfo.difficulty,
         canvasData,
-        gridSymbols: patternState.symbols,
+        gridSymbols: Object.fromEntries(
+          patternState.symbols.map(s => [`${s.row}-${s.col}`, { symbol: s.symbol, color: s.color }])
+        ),
         canvasRows: patternState.rows,
         canvasCols: patternState.cols,
         gridSize: patternState.gridSize,
@@ -343,6 +345,7 @@ export default function PatternDesigner() {
           canvasState={canvasState}
           setCanvasState={setCanvasState}
           onClearCanvas={handleClearCanvas}
+          onPatternChange={() => setPatternState(simplePattern.getPattern())}
         />
         
         <PatternCanvas

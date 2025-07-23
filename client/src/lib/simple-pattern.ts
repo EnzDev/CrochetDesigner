@@ -37,17 +37,6 @@ export class SimplePatternManager {
 
   // Place a symbol
   placeSymbol(row: number, col: number, symbol: string, color: string): void {
-    // If placing on top row (row 0), add a new row and shift everything down
-    if (row === 0) {
-      // Shift all existing symbols down by 1
-      this.pattern.symbols = this.pattern.symbols.map(s => ({
-        ...s,
-        row: s.row + 1
-      }));
-      // Increase row count
-      this.pattern.rows++;
-    }
-
     // Remove any existing symbol at this position
     this.pattern.symbols = this.pattern.symbols.filter(s => 
       !(s.row === row && s.col === col)
@@ -64,36 +53,75 @@ export class SimplePatternManager {
       !(s.row === row && s.col === col)
     );
 
-    const removed = this.pattern.symbols.length < initialLength;
-
-    // Check if we can remove empty top rows
-    if (removed) {
-      this.contractRows();
-    }
-
-    return removed;
+    return this.pattern.symbols.length < initialLength;
   }
 
-  // Contract empty top rows
-  private contractRows(): void {
-    const minRows = 3;
-    let emptyTopRows = 0;
+  // Manual grid size controls
+  addRowTop(): void {
+    // Shift all symbols down by 1
+    this.pattern.symbols = this.pattern.symbols.map(s => ({
+      ...s,
+      row: s.row + 1
+    }));
+    this.pattern.rows++;
+  }
 
-    // Count empty top rows
-    for (let row = 0; row < this.pattern.rows - minRows; row++) {
-      const hasSymbol = this.pattern.symbols.some(s => s.row === row);
-      if (hasSymbol) break;
-      emptyTopRows++;
-    }
+  addRowBottom(): void {
+    this.pattern.rows++;
+  }
 
-    // Remove empty top rows and shift symbols up
-    if (emptyTopRows > 0) {
-      this.pattern.symbols = this.pattern.symbols.map(s => ({
-        ...s,
-        row: s.row - emptyTopRows
-      }));
-      this.pattern.rows -= emptyTopRows;
-    }
+  removeRowTop(): boolean {
+    if (this.pattern.rows <= 1) return false;
+    
+    // Remove symbols from top row
+    this.pattern.symbols = this.pattern.symbols.filter(s => s.row !== 0);
+    
+    // Shift remaining symbols up
+    this.pattern.symbols = this.pattern.symbols.map(s => ({
+      ...s,
+      row: s.row - 1
+    }));
+    
+    this.pattern.rows--;
+    return true;
+  }
+
+  removeRowBottom(): boolean {
+    if (this.pattern.rows <= 1) return false;
+    
+    // Remove symbols from bottom row
+    this.pattern.symbols = this.pattern.symbols.filter(s => s.row !== this.pattern.rows - 1);
+    
+    this.pattern.rows--;
+    return true;
+  }
+
+  addColumnRight(): void {
+    this.pattern.cols++;
+  }
+
+  removeColumnRight(): boolean {
+    if (this.pattern.cols <= 1) return false;
+    
+    // Remove symbols from rightmost column
+    this.pattern.symbols = this.pattern.symbols.filter(s => s.col !== this.pattern.cols - 1);
+    
+    this.pattern.cols--;
+    return true;
+  }
+
+  setRows(rows: number): void {
+    if (rows < 1) return;
+    this.pattern.rows = rows;
+    // Remove symbols that are now out of bounds
+    this.pattern.symbols = this.pattern.symbols.filter(s => s.row < rows);
+  }
+
+  setCols(cols: number): void {
+    if (cols < 1) return;
+    this.pattern.cols = cols;
+    // Remove symbols that are now out of bounds
+    this.pattern.symbols = this.pattern.symbols.filter(s => s.col < cols);
   }
 
   // Fill rectangle
@@ -102,15 +130,6 @@ export class SimplePatternManager {
     const maxRow = Math.max(startRow, endRow);
     const minCol = Math.min(startCol, endCol);
     const maxCol = Math.max(startCol, endCol);
-
-    // If filling starts at row 0, add a row and shift everything
-    if (minRow === 0) {
-      this.pattern.symbols = this.pattern.symbols.map(s => ({
-        ...s,
-        row: s.row + 1
-      }));
-      this.pattern.rows++;
-    }
 
     // Place all symbols
     for (let row = minRow; row <= maxRow; row++) {

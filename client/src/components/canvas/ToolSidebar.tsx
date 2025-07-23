@@ -1,16 +1,20 @@
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pen, Eraser, PaintBucket, MousePointer, Grid3x3, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Pen, Eraser, PaintBucket, MousePointer, Grid3x3, Trash2, Plus, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CanvasState } from "@/pages/pattern-designer";
+import { simplePattern } from "@/lib/simple-pattern";
 
 interface ToolSidebarProps {
   canvasState: CanvasState;
   setCanvasState: (state: CanvasState | ((prev: CanvasState) => CanvasState)) => void;
   onClearCanvas: () => void;
+  onPatternChange: () => void;
 }
 
-export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas }: ToolSidebarProps) {
+export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas, onPatternChange }: ToolSidebarProps) {
   const tools = [
     { id: 'pen', icon: Pen, label: 'Pen' },
     { id: 'eraser', icon: Eraser, label: 'Eraser' },
@@ -118,74 +122,186 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
         </div>
       </div>
 
-      {/* Grid Controls */}
-      <div>
+      {/* Grid Settings */}
+      <div className="mb-6">
         <h3 className="text-sm font-medium text-craft-700 mb-3">Grid Settings</h3>
         <div className="space-y-3">
-          <div>
-            <label className="block text-xs text-craft-600 mb-1">Grid Size</label>
-            <Select
-              value={canvasState.gridSize.toString()}
-              onValueChange={(value) => 
-                setCanvasState(prev => ({ ...prev, gridSize: parseInt(value) }))
-              }
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-craft-600">Show Grid</span>
+            <button
+              onClick={() => setCanvasState(prev => ({ ...prev, showGrid: !prev.showGrid }))}
+              className={cn(
+                "w-10 h-6 rounded-full relative transition-colors",
+                canvasState.showGrid ? "bg-accent" : "bg-craft-200"
+              )}
             >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10px</SelectItem>
-                <SelectItem value="15">15px</SelectItem>
-                <SelectItem value="20">20px</SelectItem>
-                <SelectItem value="25">25px</SelectItem>
-                <SelectItem value="30">30px</SelectItem>
-              </SelectContent>
-            </Select>
+              <div
+                className={cn(
+                  "w-4 h-4 rounded-full bg-white absolute top-1 transition-transform",
+                  canvasState.showGrid ? "translate-x-5" : "translate-x-1"
+                )}
+              />
+            </button>
           </div>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => setCanvasState(prev => ({ ...prev, showGrid: !prev.showGrid }))}
-          >
-            <Grid3x3 className="w-4 h-4 mr-2" />
-            {canvasState.showGrid ? 'Hide Grid' : 'Show Grid'}
-          </Button>
+          
+          <div>
+            <Label className="text-sm text-craft-600">Grid Size (px)</Label>
+            <Input
+              type="number"
+              min="10"
+              max="50"
+              value={canvasState.gridSize}
+              onChange={(e) => {
+                const value = parseInt(e.target.value) || 20;
+                setCanvasState(prev => ({ ...prev, gridSize: value }));
+              }}
+              className="mt-1"
+            />
+          </div>
         </div>
       </div>
 
-      {/* Canvas Size Configuration */}
-      <div>
+      {/* Canvas Size Controls */}
+      <div className="mb-6">
         <h3 className="text-sm font-medium text-craft-700 mb-3">Canvas Size</h3>
-        <div className="space-y-3">
+        <div className="space-y-4">
+          {/* Rows Controls */}
           <div>
-            <label className="block text-xs text-craft-600 mb-1">Columns</label>
-            <div className="flex items-center space-x-2">
-              <input
-                type="range"
-                min="10"
-                max="100"
-                value={canvasState.canvasCols}
-                onChange={(e) => setCanvasState(prev => ({
-                  ...prev,
-                  canvasCols: parseInt(e.target.value)
-                }))}
+            <Label className="text-sm text-craft-600">Rows: {canvasState.canvasRows}</Label>
+            <div className="flex items-center gap-2 mt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  simplePattern.addRowTop();
+                  simplePattern.saveToHistory();
+                  onPatternChange();
+                }}
                 className="flex-1"
-              />
-              <span className="text-xs text-craft-600 w-8">{canvasState.canvasCols}</span>
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Add Top
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (simplePattern.removeRowTop()) {
+                    simplePattern.saveToHistory();
+                    onPatternChange();
+                  }
+                }}
+                className="flex-1"
+              >
+                <Minus className="w-3 h-3 mr-1" />
+                Remove Top
+              </Button>
             </div>
+            <div className="flex items-center gap-2 mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  simplePattern.addRowBottom();
+                  simplePattern.saveToHistory();
+                  onPatternChange();
+                }}
+                className="flex-1"
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Add Bottom
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (simplePattern.removeRowBottom()) {
+                    simplePattern.saveToHistory();
+                    onPatternChange();
+                  }
+                }}
+                className="flex-1"
+              >
+                <Minus className="w-3 h-3 mr-1" />
+                Remove Bottom
+              </Button>
+            </div>
+            <Input
+              type="number"
+              min="1"
+              max="100"
+              value={canvasState.canvasRows}
+              onChange={(e) => {
+                const value = parseInt(e.target.value) || 1;
+                simplePattern.setRows(value);
+                simplePattern.saveToHistory();
+                onPatternChange();
+              }}
+              placeholder="Set rows"
+              className="mt-2"
+            />
           </div>
-          <div className="text-xs text-craft-500">
-            Rows: {canvasState.canvasRows} (expands automatically)
+
+          {/* Columns Controls */}
+          <div>
+            <Label className="text-sm text-craft-600">Columns: {canvasState.canvasCols}</Label>
+            <div className="flex items-center gap-2 mt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  simplePattern.addColumnRight();
+                  simplePattern.saveToHistory();
+                  onPatternChange();
+                }}
+                className="flex-1"
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Add Right
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (simplePattern.removeColumnRight()) {
+                    simplePattern.saveToHistory();
+                    onPatternChange();
+                  }
+                }}
+                className="flex-1"
+              >
+                <Minus className="w-3 h-3 mr-1" />
+                Remove Right
+              </Button>
+            </div>
+            <Input
+              type="number"
+              min="1"
+              max="200"
+              value={canvasState.canvasCols}
+              onChange={(e) => {
+                const value = parseInt(e.target.value) || 1;
+                simplePattern.setCols(value);
+                simplePattern.saveToHistory();
+                onPatternChange();
+              }}
+              placeholder="Set columns"
+              className="mt-2"
+            />
           </div>
-          <Button
-            onClick={onClearCanvas}
-            variant="outline"
-            className="w-full text-craft-600 border-craft-300 hover:bg-craft-50"
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Clear Canvas
-          </Button>
         </div>
+      </div>
+
+      {/* Clear Canvas */}
+      <div>
+        <Button
+          onClick={onClearCanvas}
+          variant="outline"
+          className="w-full text-craft-600 border-craft-300 hover:bg-craft-50"
+        >
+          <Trash2 className="w-4 h-4 mr-2" />
+          Clear Canvas
+        </Button>
       </div>
     </div>
   );
