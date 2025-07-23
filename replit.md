@@ -22,6 +22,10 @@ Priority: Fix top row drawing issues - critical for crochet pattern construction
   - Replaced complex DDD with simple, reliable pattern management
   - Fixed top row drawing issues with straightforward approach
   - Simplified state management for better reliability
+  - Fixed mobile responsiveness and touch scrolling support
+  - Added grid numbering at 10s and 50s for enhanced grid styles
+  - Set chain as default symbol and removed unreliable freehand drawing
+  - Pen tool now only works with crochet symbols for consistent behavior
 
 ## System Architecture
 

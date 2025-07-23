@@ -138,13 +138,7 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
           onSymbolPlaced(gridRow, gridCol, canvasState.symbol, canvasState.color);
           onSaveToHistory();
         }
-      } else if (canvasState.tool === 'pen') {
-        // Start freehand drawing
-        ctx.beginPath();
-        ctx.moveTo(pos.x, pos.y);
-        ctx.strokeStyle = canvasState.color;
-        ctx.lineWidth = 2;
-        ctx.lineCap = 'round';
+      // No freehand drawing - pen tool only works with symbols
       } else if (canvasState.tool === 'eraser') {
         // Smart erasing - remove symbol and redraw
         const gridCol = Math.floor(pos.x / canvasState.gridSize);
@@ -167,13 +161,7 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
 
       const pos = getCanvasCoordinates(e);
 
-      if (canvasState.tool === 'pen' && !canvasState.symbol) {
-        // Continuous freehand drawing
-        ctx.lineTo(pos.x, pos.y);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(pos.x, pos.y);
-      } else if (canvasState.tool === 'pen' && canvasState.symbol) {
+      if (canvasState.tool === 'pen' && canvasState.symbol) {
         // Continuous symbol placement on grid
         const gridCol = Math.floor(pos.x / canvasState.gridSize);
         const gridRow = Math.floor(pos.y / canvasState.gridSize);
@@ -358,7 +346,7 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
                       ? "cursor-cell"
                       : canvasState.tool === 'eraser'
                       ? "cursor-grab"
-                      : "cursor-crosshair"
+                      : "cursor-not-allowed"
                   )}
                   width={canvasWidth}
                   height={canvasHeight}

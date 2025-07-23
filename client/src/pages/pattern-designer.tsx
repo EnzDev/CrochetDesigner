@@ -41,7 +41,7 @@ export default function PatternDesigner() {
   
   const [canvasState, setCanvasState] = useState<CanvasState>({
     tool: 'pen',
-    symbol: null,
+    symbol: 'chain', // Default to chain symbol
     color: '#000000',
     gridSize: 20,
     showGrid: true,
