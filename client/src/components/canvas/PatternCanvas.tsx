@@ -14,12 +14,13 @@ interface PatternCanvasProps {
   onSymbolPlaced: (row: number, col: number, symbol: string, color: string) => void;
   onSymbolErased: (row: number, col: number) => void;
   onRedrawNeeded: () => void;
+  onFillRectangle: (startRow: number, startCol: number, endRow: number, endCol: number, symbol: string, color: string) => void;
   canUndo: boolean;
   canRedo: boolean;
 }
 
 const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
-  ({ canvasState, onUndo, onRedo, onClearCanvas, onSaveToHistory, onSymbolPlaced, onSymbolErased, onRedrawNeeded, canUndo, canRedo }, ref) => {
+  ({ canvasState, onUndo, onRedo, onClearCanvas, onSaveToHistory, onSymbolPlaced, onSymbolErased, onRedrawNeeded, onFillRectangle, canUndo, canRedo }, ref) => {
     const [isDrawing, setIsDrawing] = useState(false);
     const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
     const [hoverGridPos, setHoverGridPos] = useState<{ x: number; y: number } | null>(null);
@@ -132,14 +133,11 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
         const gridX = gridCol * canvasState.gridSize + canvasState.gridSize / 2;
         const gridY = gridRow * canvasState.gridSize + canvasState.gridSize / 2;
         
-        drawCrochetSymbol(ctx, canvasState.symbol, gridX, gridY, canvasState.color, canvasState.gridSize);
-        // Wait for symbol to be drawn before tracking and saving
-        setTimeout(() => {
+        if (canvasState.symbol) {
+          drawCrochetSymbol(ctx, canvasState.symbol, gridX, gridY, canvasState.color, canvasState.gridSize);
           onSymbolPlaced(gridRow, gridCol, canvasState.symbol, canvasState.color);
-          setTimeout(() => {
-            onSaveToHistory();
-          }, 10);
-        }, 5);
+          onSaveToHistory();
+        }
       } else if (canvasState.tool === 'pen') {
         // Start freehand drawing
         ctx.beginPath();
@@ -186,12 +184,9 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
         const currentGridKey = `${gridRow}-${gridCol}`;
         const lastGridKey = `${Math.floor(lastPos.y / canvasState.gridSize)}-${Math.floor(lastPos.x / canvasState.gridSize)}`;
         
-        if (currentGridKey !== lastGridKey) {
+        if (currentGridKey !== lastGridKey && canvasState.symbol) {
           drawCrochetSymbol(ctx, canvasState.symbol, gridX, gridY, canvasState.color, canvasState.gridSize);
-          // Add a small delay to ensure canvas draw completes before symbol tracking
-          setTimeout(() => {
-            onSymbolPlaced(gridRow, gridCol, canvasState.symbol, canvasState.color);
-          }, 5);
+          onSymbolPlaced(gridRow, gridCol, canvasState.symbol, canvasState.color);
         }
       } else if (canvasState.tool === 'eraser') {
         // Continuous smart erasing
@@ -240,18 +235,11 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
       // Process from bottom to top to avoid shifting conflicts
       const sortedRows = Array.from(new Set(Array.from({length: maxRow - minRow + 1}, (_, i) => maxRow - i)));
       
-      sortedRows.forEach((row, index) => {
-        setTimeout(() => {
-          for (let col = minCol; col <= maxCol; col++) {
-            if (row >= minRow && row <= maxRow && canvasState.symbol) {
-              // Further delay each column placement
-              setTimeout(() => {
-                onSymbolPlaced(row, col, canvasState.symbol, canvasState.color);
-              }, col * 5);
-            }
-          }
-        }, index * 30); // Increased stagger delay for row expansion
-      });
+      // Use domain fill method for proper handling
+      if (canvasState.symbol) {
+        // Import domain function - we'll add this as a callback
+        onFillRectangle(minRow, minCol, maxRow, maxCol, canvasState.symbol, canvasState.color);
+      }
     };
 
     const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {

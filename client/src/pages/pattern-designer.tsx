@@ -8,6 +8,7 @@ import PatternInfoPanel from "@/components/canvas/PatternInfoPanel";
 import { SavePatternModal } from "@/components/modals/SavePatternModal";
 import { indexedDBStorage } from "@/lib/indexdb-storage";
 import { drawCrochetSymbol } from "@/lib/crochet-symbols";
+import { patternDomain, type PatternState } from "@/lib/pattern-domain";
 
 export interface CanvasState {
   tool: 'pen' | 'eraser' | 'fill' | 'select';
@@ -48,8 +49,8 @@ export default function PatternDesigner() {
     canvasCols: 40, // Default number of columns
   });
 
-  // Track which grid cells have symbols with their data
-  const [gridSymbols, setGridSymbols] = useState<Map<string, { symbol: string; color: string }>>(new Map());
+  // Use domain state instead of local state
+  const [domainState, setDomainState] = useState<PatternState>(patternDomain.getState());
 
   const [patternInfo, setPatternInfo] = useState<PatternInfo>({
     title: '',
@@ -62,91 +63,34 @@ export default function PatternDesigner() {
     materials: [],
   });
 
-  // History for undo/redo
-  const [history, setHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-
-  // Automatically redraw canvas when rows change or symbols are updated
+  // Subscribe to domain state changes
   useEffect(() => {
-    redrawCanvas();
-  }, [canvasState.canvasRows, canvasState.canvasCols, canvasState.gridSize, gridSymbols]);
-
-  // Symbol placement and removal handlers
-  const handleSymbolPlaced = (row: number, col: number, symbol: string, color: string) => {
-    // First check if we need to add a new row at the top
-    if (row === 0) {
-      // Add new row and shift existing symbols down
+    const unsubscribe = patternDomain.subscribe((newState) => {
+      setDomainState(newState);
+      // Update canvas state to match domain
       setCanvasState(prev => ({
         ...prev,
-        canvasRows: prev.canvasRows + 1
+        canvasRows: newState.grid.rows,
+        canvasCols: newState.grid.cols,
+        gridSize: newState.grid.gridSize
       }));
-      
-      // Update all existing symbol positions (shift down by 1 row) and add new symbol
-      setGridSymbols(prev => {
-        const newSymbols = new Map<string, { symbol: string; color: string }>();
-        
-        // Shift all existing symbols down by 1 row
-        prev.forEach((value, oldKey) => {
-          const [oldRow, oldCol] = oldKey.split('-').map(Number);
-          const newKey = `${oldRow + 1}-${oldCol}`;
-          newSymbols.set(newKey, value);
-        });
-        
-        // Add the new symbol at the top row (0)
-        newSymbols.set(`0-${col}`, { symbol, color });
-        return newSymbols;
-      });
-    } else {
-      // Normal placement - just add the symbol
-      const key = `${row}-${col}`;
-      setGridSymbols(prev => {
-        const newSymbols = new Map(prev);
-        newSymbols.set(key, { symbol, color });
-        return newSymbols;
-      });
-    }
+    });
+
+    return unsubscribe;
+  }, []);
+
+  // Automatically redraw canvas when domain state changes
+  useEffect(() => {
+    redrawCanvas();
+  }, [domainState, canvasState.showGrid]);
+
+  // Symbol placement and removal handlers using domain
+  const handleSymbolPlaced = (row: number, col: number, symbol: string, color: string) => {
+    patternDomain.placeSymbol(row, col, symbol, color);
   };
 
   const handleSymbolErased = (row: number, col: number) => {
-    const key = `${row}-${col}`;
-    setGridSymbols(prev => {
-      const newSymbols = new Map(prev);
-      newSymbols.delete(key);
-      return newSymbols;
-    });
-
-    // Check if top rows are now empty and can be removed
-    setTimeout(() => {
-      setCanvasState(prev => {
-        let newRows = prev.canvasRows;
-        
-        // Remove empty top rows, but keep at least 3 rows
-        while (newRows > 3) {
-          const topRowHasSymbols = Array.from(gridSymbols.keys()).some(key => {
-            const [row] = key.split('-').map(Number);
-            return row === 0;
-          });
-          
-          if (topRowHasSymbols) break;
-          
-          newRows--;
-          // Shift all remaining symbols up by one row
-          setGridSymbols(prevSymbols => {
-            const newSymbols = new Map<string, { symbol: string; color: string }>();
-            prevSymbols.forEach((value, oldKey) => {
-              const [oldRow, oldCol] = oldKey.split('-').map(Number);
-              if (oldRow > 0) { // Skip the top row being removed
-                const newKey = `${oldRow - 1}-${oldCol}`;
-                newSymbols.set(newKey, value);
-              }
-            });
-            return newSymbols;
-          });
-        }
-        
-        return { ...prev, canvasRows: newRows };
-      });
-    }, 10); // Small delay to ensure state updates complete
+    patternDomain.removeSymbol(row, col);
   };
 
   const redrawCanvas = () => {
@@ -164,14 +108,12 @@ export default function PatternDesigner() {
       drawGrid(ctx, canvas.width, canvas.height, canvasState.gridSize);
     }
     
-    // Draw symbols using proper crochet symbol drawing
-    gridSymbols.forEach((symbolData, key) => {
-      const [row, col] = key.split('-').map(Number);
-      const x = col * canvasState.gridSize + canvasState.gridSize / 2;
-      const y = row * canvasState.gridSize + canvasState.gridSize / 2;
+    // Draw symbols from domain state
+    domainState.grid.symbols.forEach((symbol) => {
+      const x = symbol.col * canvasState.gridSize + canvasState.gridSize / 2;
+      const y = symbol.row * canvasState.gridSize + canvasState.gridSize / 2;
       
-      // Import the drawCrochetSymbol function inline for now
-      drawCrochetSymbol(ctx, symbolData.symbol, x, y, symbolData.color, canvasState.gridSize * 0.8);
+      drawCrochetSymbol(ctx, symbol.symbolType, x, y, symbol.color, canvasState.gridSize * 0.8);
     });
   };
 
@@ -209,10 +151,10 @@ export default function PatternDesigner() {
         yarnWeight: patternInfo.yarnWeight,
         difficulty: patternInfo.difficulty,
         canvasData,
-        gridSymbols: Object.fromEntries(gridSymbols),
-        canvasRows: canvasState.canvasRows,
-        canvasCols: canvasState.canvasCols,
-        gridSize: canvasState.gridSize,
+        gridSymbols: patternDomain.exportPattern().symbols,
+        canvasRows: domainState.grid.rows,
+        canvasCols: domainState.grid.cols,
+        gridSize: domainState.grid.gridSize,
         canvasWidth: canvasRef.current.width,
         canvasHeight: canvasRef.current.height,
       };
@@ -264,13 +206,26 @@ export default function PatternDesigner() {
       }));
     }
     
-    // Load grid symbols
+    // Load grid symbols using domain
     if (pattern.gridSymbols) {
-      const symbolMap = new Map();
-      Object.entries(pattern.gridSymbols).forEach(([key, value]) => {
-        symbolMap.set(key, value);
+      const symbols = Array.isArray(pattern.gridSymbols) 
+        ? pattern.gridSymbols 
+        : Object.entries(pattern.gridSymbols).map(([key, value]: [string, any]) => {
+            const [row, col] = key.split('-').map(Number);
+            return {
+              row,
+              col,
+              symbolType: value.symbol || value.symbolType,
+              color: value.color
+            };
+          });
+      
+      patternDomain.loadPattern({
+        symbols,
+        rows: pattern.canvasRows || 3,
+        cols: pattern.canvasCols || 40,
+        gridSize: pattern.gridSize || 20
       });
-      setGridSymbols(symbolMap);
     }
     
     // Load canvas image
@@ -312,66 +267,23 @@ export default function PatternDesigner() {
   };
 
   const handleUndo = () => {
-    if (historyIndex > 0) {
-      setHistoryIndex(historyIndex - 1);
-      const canvas = canvasRef.current;
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          const img = new Image();
-          img.onload = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, 0, 0);
-          };
-          img.src = history[historyIndex - 1];
-        }
-      }
-    }
+    patternDomain.undo();
   };
 
   const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      setHistoryIndex(historyIndex + 1);
-      const canvas = canvasRef.current;
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          const img = new Image();
-          img.onload = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, 0, 0);
-          };
-          img.src = history[historyIndex + 1];
-        }
-      }
-    }
+    patternDomain.redo();
   };
 
   const handleClearCanvas = () => {
-    if (!canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      setGridSymbols(new Map());
-      setCanvasState(prev => ({ ...prev, canvasRows: 3 })); // Reset to 3 rows
-      
-      if (canvasState.showGrid) {
-        drawGrid(ctx, canvas.width, canvas.height, canvasState.gridSize);
-      }
-      saveToHistory();
-    }
+    patternDomain.clearAll();
   };
 
   const saveToHistory = () => {
-    if (!canvasRef.current) return;
-    
-    const canvasData = canvasRef.current.toDataURL();
-    const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(canvasData);
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
+    patternDomain.saveToHistory();
+  };
+
+  const handleFillRectangle = (startRow: number, startCol: number, endRow: number, endCol: number, symbol: string, color: string) => {
+    patternDomain.fillRectangle(startRow, startCol, endRow, endCol, symbol, color);
   };
 
   return (
@@ -432,8 +344,9 @@ export default function PatternDesigner() {
           onSymbolPlaced={handleSymbolPlaced}
           onSymbolErased={handleSymbolErased}
           onRedrawNeeded={redrawCanvas}
-          canUndo={historyIndex > 0}
-          canRedo={historyIndex < history.length - 1}
+          onFillRectangle={handleFillRectangle}
+          canUndo={patternDomain.canUndo()}
+          canRedo={patternDomain.canRedo()}
         />
         
         <SavePatternModal
