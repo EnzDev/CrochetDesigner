@@ -406,7 +406,8 @@ export default function PatternDesigner() {
           row: s.row,
           col: s.col,
           symbol: s.symbol || s.symbolType,
-          color: s.color
+          color: s.color,
+          width: s.width || 1
         }));
       } else {
         symbols = Object.entries(pattern.gridSymbols).map(([key, value]: [string, any]) => {
@@ -415,10 +416,16 @@ export default function PatternDesigner() {
             row,
             col,
             symbol: value.symbol || value.symbolType,
-            color: value.color
+            color: value.color,
+            width: value.width || 1
           };
         });
       }
+      
+      // Clear existing pattern first
+      simplePattern.clearPattern();
+      
+      console.log('Loading symbols:', symbols);
       
       simplePattern.loadPattern({
         symbols,
@@ -428,24 +435,14 @@ export default function PatternDesigner() {
       });
       
       setPatternState(simplePattern.getPattern());
+      
+      console.log('Pattern loaded, current state:', simplePattern.getPattern());
     }
     
-    // Load canvas image
-    if (canvasRef.current && pattern.canvasData) {
-      const ctx = canvasRef.current.getContext('2d');
-      if (ctx) {
-        const img = new Image();
-        img.onload = () => {
-          ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
-          ctx.drawImage(img, 0, 0);
-          // Trigger redraw after loading
-          setTimeout(() => {
-            redrawCanvas();
-          }, 100);
-        };
-        img.src = pattern.canvasData;
-      }
-    }
+    // Force redraw after loading
+    setTimeout(() => {
+      redrawCanvas();
+    }, 100);
     
     toast({
       title: "Pattern loaded",

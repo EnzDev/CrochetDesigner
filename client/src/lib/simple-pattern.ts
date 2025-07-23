@@ -234,6 +234,11 @@ export class SimplePatternManager {
     };
   }
 
+  // Clear entire pattern (alias for clear)
+  clearPattern(): void {
+    this.clear();
+  }
+
   // History management
   saveToHistory(): void {
     // Remove future history
