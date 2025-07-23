@@ -1,50 +1,29 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { QueryClient } from '@tanstack/react-query';
+import { indexedDBStorage } from './indexdb-storage';
 
-async function throwIfResNotOk(res: Response) {
-  if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+// Initialize IndexedDB on app start
+indexedDBStorage.init().catch(console.error);
+
+// Offline query function for IndexedDB
+const defaultQueryFn = async ({ queryKey }: any) => {
+  const [url, ...params] = queryKey;
+  
+  if (url === '/api/patterns') {
+    return await indexedDBStorage.getAllPatterns();
   }
-}
-
-export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
-
-  await throwIfResNotOk(res);
-  return res;
-}
-
-type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
-  on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
-      credentials: "include",
-    });
-
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
-    }
-
-    await throwIfResNotOk(res);
-    return await res.json();
-  };
+  
+  if (url.startsWith('/api/patterns/') && params.length > 0) {
+    const id = parseInt(params[0], 10);
+    return await indexedDBStorage.getPattern(id);
+  }
+  
+  throw new Error(`Unknown query: ${url}`);
+};
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
+      queryFn: defaultQueryFn,
       refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: Infinity,
@@ -55,3 +34,37 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+// Offline API request handlers
+export async function apiRequest(
+  method: string,
+  url: string,
+  data?: unknown | undefined,
+): Promise<any> {
+  const body = data;
+
+  if (url === '/api/patterns') {
+    if (method === 'GET') {
+      return await indexedDBStorage.getAllPatterns();
+    } else if (method === 'POST') {
+      const id = await indexedDBStorage.savePattern(body as any);
+      return { ...(body as object), id };
+    }
+  }
+
+  if (url.startsWith('/api/patterns/')) {
+    const id = parseInt(url.split('/').pop() || '0', 10);
+    
+    if (method === 'GET') {
+      return await indexedDBStorage.getPattern(id);
+    } else if (method === 'PUT') {
+      await indexedDBStorage.updatePattern(id, body as any);
+      return { ...(body as object), id };
+    } else if (method === 'DELETE') {
+      await indexedDBStorage.deletePattern(id);
+      return { success: true };
+    }
+  }
+
+  throw new Error(`Unknown API request: ${method} ${url}`);
+}

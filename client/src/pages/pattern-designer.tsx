@@ -8,7 +8,7 @@ import { Download, FolderOpen, Save } from "lucide-react";
 import PatternCanvas from "@/components/canvas/PatternCanvas";
 import ToolSidebar from "@/components/canvas/ToolSidebar";
 import PatternInfoPanel from "@/components/canvas/PatternInfoPanel";
-import SavePatternModal from "@/components/modals/SavePatternModal";
+import { SavePatternModal } from "@/components/modals/SavePatternModal";
 import type { Pattern, InsertPattern } from "@shared/schema";
 
 export interface CanvasState {
@@ -189,16 +189,15 @@ export default function PatternDesigner() {
   });
 
   const savePatternMutation = useMutation({
-    mutationFn: async (data: InsertPattern) => {
-      const response = await apiRequest('POST', '/api/patterns', data);
-      return response.json();
+    mutationFn: async (data: any) => {
+      return await apiRequest('POST', '/api/patterns', data);
     },
-    onSuccess: (pattern: Pattern) => {
+    onSuccess: (pattern: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/patterns'] });
       setCurrentPatternId(pattern.id);
       toast({
-        title: "Pattern saved",
-        description: `"${pattern.title}" has been saved successfully.`,
+        title: "Pattern saved offline",
+        description: `"${pattern.title}" has been saved to your device.`,
       });
       setShowSaveModal(false);
     },
@@ -212,15 +211,14 @@ export default function PatternDesigner() {
   });
 
   const updatePatternMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<InsertPattern> }) => {
-      const response = await apiRequest('PATCH', `/api/patterns/${id}`, data);
-      return response.json();
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      return await apiRequest('PUT', `/api/patterns/${id}`, data);
     },
-    onSuccess: (pattern: Pattern) => {
+    onSuccess: (pattern: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/patterns'] });
       toast({
-        title: "Pattern updated",
-        description: `"${pattern.title}" has been updated successfully.`,
+        title: "Pattern updated offline",
+        description: `"${pattern.title}" has been updated on your device.`,
       });
     },
     onError: () => {
@@ -243,13 +241,22 @@ export default function PatternDesigner() {
       history: history.slice(0, historyIndex + 1),
     };
 
-    const data: InsertPattern = {
+    // Convert gridSymbols Map to plain object for storage
+    const gridSymbolsObj: Record<string, { symbol: string; color: string }> = {};
+    gridSymbols.forEach((value, key) => {
+      gridSymbolsObj[key] = value;
+    });
+
+    const data = {
       ...patternInfo,
       canvasData,
-      patternData: patternData as any,
-      gridSize: canvasState.gridSize,
       canvasWidth: canvas.width,
       canvasHeight: canvas.height,
+      gridSize: canvasState.gridSize,
+      canvasRows: canvasState.canvasRows,
+      canvasCols: canvasState.canvasCols,
+      gridSymbols: gridSymbolsObj,
+      patternElements: patternData,
     };
 
     if (currentPatternId) {
@@ -271,6 +278,60 @@ export default function PatternDesigner() {
     toast({
       title: "Pattern exported",
       description: "Your pattern has been exported as an image.",
+    });
+  };
+
+  const handleLoadPattern = (pattern: any) => {
+    setPatternInfo({
+      title: pattern.title || '',
+      hookSize: pattern.hookSize || '5.0mm (H)',
+      yarnWeight: pattern.yarnWeight || 'Medium (4)',
+      gauge: pattern.gauge || '',
+      difficulty: pattern.difficulty || 'intermediate',
+      notes: pattern.notes || '',
+      materials: pattern.materials || [],
+    });
+    setCurrentPatternId(pattern.id);
+    
+    // Load canvas state
+    if (pattern.canvasRows) {
+      setCanvasState(prev => ({
+        ...prev,
+        canvasRows: pattern.canvasRows,
+        canvasCols: pattern.canvasCols || prev.canvasCols,
+        gridSize: pattern.gridSize || prev.gridSize,
+      }));
+    }
+    
+    // Load grid symbols
+    if (pattern.gridSymbols) {
+      const symbolMap = new Map();
+      Object.entries(pattern.gridSymbols).forEach(([key, value]) => {
+        symbolMap.set(key, value);
+      });
+      setGridSymbols(symbolMap);
+    }
+    
+    // Load canvas image
+    if (canvasRef.current && pattern.canvasData) {
+      const ctx = canvasRef.current.getContext('2d');
+      if (ctx) {
+        const img = new Image();
+        img.onload = () => {
+          ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
+          ctx.drawImage(img, 0, 0);
+          // Trigger redraw after loading
+          setTimeout(() => {
+            redrawCanvas();
+          }, 100);
+        };
+        img.src = pattern.canvasData;
+      }
+    }
+    
+    toast({
+      title: "Pattern loaded",
+      description: `"${pattern.title}" has been loaded from your device.`,
     });
   };
 
@@ -402,6 +463,16 @@ export default function PatternDesigner() {
           onRedrawNeeded={redrawCanvas}
           canUndo={historyIndex > 0}
           canRedo={historyIndex < history.length - 1}
+        />
+        
+        <SavePatternModal
+          isOpen={showSaveModal}
+          onClose={() => setShowSaveModal(false)}
+          patternInfo={patternInfo}
+          setPatternInfo={setPatternInfo}
+          onSave={handleSaveCanvas}
+          onLoad={handleLoadPattern}
+          isLoading={savePatternMutation.isPending || updatePatternMutation.isPending}
         />
         
         <PatternInfoPanel
