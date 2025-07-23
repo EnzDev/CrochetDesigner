@@ -218,11 +218,38 @@
   background: var(--craft-400);
 }
 
-/* Mobile canvas scrolling improvements */
+/* Canvas scrolling improvements for all devices */
 .canvas-container {
   overflow: auto !important;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: auto;
+  scrollbar-width: auto;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+/* Desktop scrollbar styling */
+.canvas-container::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+.canvas-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 7px;
+}
+
+.canvas-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 7px;
+  border: 2px solid #f1f5f9;
+}
+
+.canvas-container::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.canvas-container::-webkit-scrollbar-corner {
+  background: #f1f5f9;
 }
 
 .mobile-scroll-fix {

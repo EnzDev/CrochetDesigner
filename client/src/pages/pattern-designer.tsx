@@ -40,6 +40,11 @@ export interface PatternInfo {
   materials: string[];
 }
 
+// Helper function to check if a point is near a selection handle
+const isNearHandle = (mouseX: number, mouseY: number, handleX: number, handleY: number, threshold: number = 10) => {
+  return Math.abs(mouseX - handleX) <= threshold && Math.abs(mouseY - handleY) <= threshold;
+};
+
 export default function PatternDesigner() {
   const { toast } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -222,6 +227,29 @@ export default function PatternDesigner() {
       
       ctx.strokeRect(startX, startY, endX - startX, endY - startY);
       ctx.setLineDash([]);
+      
+      // Draw corner resize handles
+      const handleSize = 8;
+      ctx.fillStyle = '#007bff';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+      
+      // Top-left handle
+      ctx.fillRect(startX - handleSize/2, startY - handleSize/2, handleSize, handleSize);
+      ctx.strokeRect(startX - handleSize/2, startY - handleSize/2, handleSize, handleSize);
+      
+      // Top-right handle
+      ctx.fillRect(endX - handleSize/2, startY - handleSize/2, handleSize, handleSize);
+      ctx.strokeRect(endX - handleSize/2, startY - handleSize/2, handleSize, handleSize);
+      
+      // Bottom-left handle
+      ctx.fillRect(startX - handleSize/2, endY - handleSize/2, handleSize, handleSize);
+      ctx.strokeRect(startX - handleSize/2, endY - handleSize/2, handleSize, handleSize);
+      
+      // Bottom-right handle
+      ctx.fillRect(endX - handleSize/2, endY - handleSize/2, handleSize, handleSize);
+      ctx.strokeRect(endX - handleSize/2, endY - handleSize/2, handleSize, handleSize);
     }
   };
 
@@ -582,6 +610,7 @@ export default function PatternDesigner() {
           onSelectionStart={handleSelectionStart}
           onSelectionUpdate={handleSelectionUpdate}
           onSelectionEnd={handleSelectionEnd}
+          selection={selection}
           canUndo={simplePattern.canUndo()}
           canRedo={simplePattern.canRedo()}
         />

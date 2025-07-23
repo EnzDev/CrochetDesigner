@@ -18,17 +18,19 @@ interface PatternCanvasProps {
   onSelectionStart?: (row: number, col: number) => void;
   onSelectionUpdate?: (row: number, col: number) => void;
   onSelectionEnd?: () => void;
+  selection?: { startRow: number; startCol: number; endRow: number; endCol: number } | null;
   canUndo: boolean;
   canRedo: boolean;
 }
 
 const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
-  ({ canvasState, onUndo, onRedo, onClearCanvas, onSaveToHistory, onSymbolPlaced, onSymbolErased, onRedrawNeeded, onFillRectangle, onSelectionStart, onSelectionUpdate, onSelectionEnd, canUndo, canRedo }, ref) => {
+  ({ canvasState, onUndo, onRedo, onClearCanvas, onSaveToHistory, onSymbolPlaced, onSymbolErased, onRedrawNeeded, onFillRectangle, onSelectionStart, onSelectionUpdate, onSelectionEnd, selection, canUndo, canRedo }, ref) => {
     const [isDrawing, setIsDrawing] = useState(false);
     const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
     const [hoverGridPos, setHoverGridPos] = useState<{ x: number; y: number } | null>(null);
     const [fillStartPos, setFillStartPos] = useState<{ x: number; y: number } | null>(null);
     const [isSelecting, setIsSelecting] = useState(false);
+    const [isResizing, setIsResizing] = useState<string | null>(null); // 'tl', 'tr', 'bl', 'br'
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Calculate dynamic canvas dimensions
@@ -113,6 +115,31 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
       setLastPos(pos);
 
       if (canvasState.tool === 'select') {
+        // Check if clicking on selection handles first
+        if (selection) {
+          const startX = selection.startCol * canvasState.gridSize;
+          const startY = selection.startRow * canvasState.gridSize;
+          const endX = (selection.endCol + 1) * canvasState.gridSize;
+          const endY = (selection.endRow + 1) * canvasState.gridSize;
+          const handleSize = 8;
+          
+          // Check which handle is being clicked
+          if (isNearHandle(pos.x, pos.y, startX, startY, handleSize)) {
+            setIsResizing('tl'); // top-left
+            return;
+          } else if (isNearHandle(pos.x, pos.y, endX, startY, handleSize)) {
+            setIsResizing('tr'); // top-right
+            return;
+          } else if (isNearHandle(pos.x, pos.y, startX, endY, handleSize)) {
+            setIsResizing('bl'); // bottom-left
+            return;
+          } else if (isNearHandle(pos.x, pos.y, endX, endY, handleSize)) {
+            setIsResizing('br'); // bottom-right
+            return;
+          }
+        }
+        
+        // Start new selection if not clicking on handles
         setIsSelecting(true);
         onSelectionStart?.(gridRow, gridCol);
       } else if (canvasState.tool === 'fill' && canvasState.symbol) {
@@ -160,6 +187,35 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
 
       if (isSelecting && canvasState.tool === 'select') {
         onSelectionUpdate?.(gridRow, gridCol);
+      } else if (isResizing && selection) {
+        // Handle resize operation
+        let newSelection = { ...selection };
+        
+        switch (isResizing) {
+          case 'tl': // top-left
+            newSelection.startRow = Math.min(gridRow, selection.endRow);
+            newSelection.startCol = Math.min(gridCol, selection.endCol);
+            if (gridRow > selection.endRow) newSelection.endRow = gridRow;
+            if (gridCol > selection.endCol) newSelection.endCol = gridCol;
+            break;
+          case 'tr': // top-right
+            newSelection.startRow = Math.min(gridRow, selection.endRow);
+            newSelection.endCol = Math.max(gridCol, selection.startCol);
+            if (gridRow > selection.endRow) newSelection.endRow = gridRow;
+            break;
+          case 'bl': // bottom-left
+            newSelection.endRow = Math.max(gridRow, selection.startRow);
+            newSelection.startCol = Math.min(gridCol, selection.endCol);
+            if (gridCol > selection.endCol) newSelection.endCol = gridCol;
+            break;
+          case 'br': // bottom-right
+            newSelection.endRow = Math.max(gridRow, selection.startRow);
+            newSelection.endCol = Math.max(gridCol, selection.startCol);
+            break;
+        }
+        
+        // Update selection through the callback
+        onSelectionUpdate?.(newSelection.endRow, newSelection.endCol);
       } else if (isDrawing && canvasState.tool === 'pen' && canvasState.symbol) {
         const canvas = ref as React.RefObject<HTMLCanvasElement>;
         if (!canvas.current) return;
@@ -191,6 +247,11 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
       }
 
       setLastPos(pos);
+    };
+
+    // Helper function to check if a point is near a selection handle
+    const isNearHandle = (mouseX: number, mouseY: number, handleX: number, handleY: number, threshold: number = 10) => {
+      return Math.abs(mouseX - handleX) <= threshold && Math.abs(mouseY - handleY) <= threshold;
     };
 
     const fillRectangle = (ctx: CanvasRenderingContext2D, start: { x: number; y: number }, end: { x: number; y: number }) => {
@@ -232,6 +293,28 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
     const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
       const pos = getCanvasCoordinates(e);
       
+      // Update cursor for selection tool when over handles
+      if (canvasState.tool === 'select' && selection && !isSelecting && !isResizing) {
+        const startX = selection.startCol * canvasState.gridSize;
+        const startY = selection.startRow * canvasState.gridSize;
+        const endX = (selection.endCol + 1) * canvasState.gridSize;
+        const endY = (selection.endRow + 1) * canvasState.gridSize;
+        const handleSize = 8;
+        
+        const canvas = ref as React.RefObject<HTMLCanvasElement>;
+        if (canvas.current) {
+          if (isNearHandle(pos.x, pos.y, startX, startY, handleSize) || 
+              isNearHandle(pos.x, pos.y, endX, endY, handleSize)) {
+            canvas.current.style.cursor = 'nw-resize';
+          } else if (isNearHandle(pos.x, pos.y, endX, startY, handleSize) || 
+                     isNearHandle(pos.x, pos.y, startX, endY, handleSize)) {
+            canvas.current.style.cursor = 'ne-resize';
+          } else {
+            canvas.current.style.cursor = 'crosshair';
+          }
+        }
+      }
+      
       // Hover feedback for different tools
       if ((canvasState.tool === 'pen' || canvasState.tool === 'fill') && canvasState.symbol && !isDrawing) {
         const gridCol = Math.floor(pos.x / canvasState.gridSize);
@@ -258,6 +341,9 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
       
       if (isSelecting) {
         setIsSelecting(false);
+        onSelectionEnd?.();
+      } else if (isResizing) {
+        setIsResizing(null);
         onSelectionEnd?.();
       } else if (isDrawing && (canvasState.tool === 'pen' || canvasState.tool === 'eraser')) {
         onSaveToHistory();
@@ -350,6 +436,8 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
                       ? "cursor-cell"
                       : canvasState.tool === 'eraser'
                       ? "cursor-grab"
+                      : canvasState.tool === 'select'
+                      ? "cursor-crosshair"
                       : "cursor-not-allowed"
                   )}
                   width={canvasWidth}
