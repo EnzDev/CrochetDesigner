@@ -70,32 +70,56 @@ export class PatternDomain {
   // Place a symbol at specific position
   placeSymbol(row: number, col: number, symbolType: string, color: string): void {
     const symbolId = `symbol_${Date.now()}_${Math.random()}`;
-    const key = this.getGridKey(row, col);
+    
+    // Simple approach: if placing on row 0, just add a row and shift everything down
+    if (row === 0) {
+      // First, shift all existing symbols down by 1
+      const newSymbols = new Map<string, PatternSymbol>();
+      this.state.grid.symbols.forEach((symbol) => {
+        const shiftedSymbol: PatternSymbol = {
+          ...symbol,
+          row: symbol.row + 1
+        };
+        const newKey = this.getGridKey(shiftedSymbol.row, shiftedSymbol.col);
+        newSymbols.set(newKey, shiftedSymbol);
+      });
 
-    // Handle row expansion if placing on top row
-    if (row === 0 && this.state.grid.symbols.size > 0) {
-      this.expandUpward();
-      // After expansion, place at the new top row (which is now row 0)
-      row = 0;
+      // Add the new symbol at row 0
+      const newSymbol: PatternSymbol = {
+        id: symbolId,
+        symbolType,
+        color,
+        row: 0,
+        col
+      };
+      const key = this.getGridKey(0, col);
+      newSymbols.set(key, newSymbol);
+
+      // Update grid with new symbols and increased row count
+      this.state.grid = {
+        ...this.state.grid,
+        symbols: newSymbols,
+        rows: this.state.grid.rows + 1
+      };
+    } else {
+      // Normal placement for non-top rows
+      const key = this.getGridKey(row, col);
+      const symbol: PatternSymbol = {
+        id: symbolId,
+        symbolType,
+        color,
+        row,
+        col
+      };
+
+      const newSymbols = new Map(this.state.grid.symbols);
+      newSymbols.set(key, symbol);
+
+      this.state.grid = {
+        ...this.state.grid,
+        symbols: newSymbols
+      };
     }
-
-    // Create new symbol
-    const symbol: PatternSymbol = {
-      id: symbolId,
-      symbolType,
-      color,
-      row,
-      col
-    };
-
-    // Update grid
-    const newSymbols = new Map(this.state.grid.symbols);
-    newSymbols.set(key, symbol);
-
-    this.state.grid = {
-      ...this.state.grid,
-      symbols: newSymbols
-    };
 
     this.notify();
   }
@@ -120,26 +144,7 @@ export class PatternDomain {
     return removed;
   }
 
-  // Expand grid upward (add row at top)
-  private expandUpward(): void {
-    const newSymbols = new Map<string, PatternSymbol>();
-
-    // Shift all existing symbols down by one row
-    this.state.grid.symbols.forEach((symbol) => {
-      const newSymbol: PatternSymbol = {
-        ...symbol,
-        row: symbol.row + 1
-      };
-      const newKey = this.getGridKey(newSymbol.row, newSymbol.col);
-      newSymbols.set(newKey, newSymbol);
-    });
-
-    this.state.grid = {
-      ...this.state.grid,
-      symbols: newSymbols,
-      rows: this.state.grid.rows + 1
-    };
-  }
+  // Remove this method since we're handling expansion directly in placeSymbol
 
   // Contract grid if top rows are empty
   private contractIfPossible(): void {
@@ -188,14 +193,57 @@ export class PatternDomain {
     const minCol = Math.min(startCol, endCol);
     const maxCol = Math.max(startCol, endCol);
 
-    // Place symbols from bottom to top to handle row expansion properly
-    for (let row = maxRow; row >= minRow; row--) {
+    // Calculate how many new rows we need if filling starts at row 0
+    let rowsToAdd = 0;
+    if (minRow === 0) {
+      rowsToAdd = 1;
+    }
+
+    // If we need to add rows, do it once at the beginning
+    if (rowsToAdd > 0) {
+      // Shift all existing symbols down
+      const newSymbols = new Map<string, PatternSymbol>();
+      this.state.grid.symbols.forEach((symbol) => {
+        const shiftedSymbol: PatternSymbol = {
+          ...symbol,
+          row: symbol.row + rowsToAdd
+        };
+        const newKey = this.getGridKey(shiftedSymbol.row, shiftedSymbol.col);
+        newSymbols.set(newKey, shiftedSymbol);
+      });
+
+      this.state.grid = {
+        ...this.state.grid,
+        symbols: newSymbols,
+        rows: this.state.grid.rows + rowsToAdd
+      };
+    }
+
+    // Now place all symbols normally (no more row expansion needed)
+    for (let row = minRow; row <= maxRow; row++) {
       for (let col = minCol; col <= maxCol; col++) {
-        this.placeSymbol(row, col, symbolType, color);
+        const symbolId = `fill_symbol_${Date.now()}_${row}_${col}`;
+        const key = this.getGridKey(row, col);
+        const symbol: PatternSymbol = {
+          id: symbolId,
+          symbolType,
+          color,
+          row,
+          col
+        };
+
+        const newSymbols = new Map(this.state.grid.symbols);
+        newSymbols.set(key, symbol);
+
+        this.state.grid = {
+          ...this.state.grid,
+          symbols: newSymbols
+        };
       }
     }
 
     this.saveToHistory();
+    this.notify();
   }
 
   // Clear all symbols

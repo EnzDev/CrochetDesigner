@@ -7,6 +7,7 @@ This is a full-stack web application for designing and managing crochet patterns
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Priority: Fix top row drawing issues - critical for crochet pattern construction.
 
 ## Recent Changes
 
