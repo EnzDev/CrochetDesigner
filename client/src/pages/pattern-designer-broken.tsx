@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+// Removed react-query imports for offline-only app
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Download, FolderOpen, Save } from "lucide-react";
@@ -6,7 +7,7 @@ import PatternCanvas from "@/components/canvas/PatternCanvas";
 import ToolSidebar from "@/components/canvas/ToolSidebar";
 import PatternInfoPanel from "@/components/canvas/PatternInfoPanel";
 import { SavePatternModal } from "@/components/modals/SavePatternModal";
-import { indexedDBStorage } from "@/lib/indexdb-storage";
+// Remove shared schema import - using local types now
 
 export interface CanvasState {
   tool: 'pen' | 'eraser' | 'fill' | 'select';
@@ -50,6 +51,124 @@ export default function PatternDesigner() {
   // Track which grid cells have symbols with their data
   const [gridSymbols, setGridSymbols] = useState<Map<string, { symbol: string; color: string }>>(new Map());
 
+  // Automatically redraw canvas when rows change or symbols are updated
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      redrawCanvas();
+    }, 10); // Small delay to ensure state is fully updated
+    
+    return () => clearTimeout(timeoutId);
+  }, [canvasState.canvasRows, gridSymbols, canvasState.showGrid]);
+
+  // Handle symbol placement with upward row expansion (proper crochet growth)
+  const handleSymbolPlaced = (row: number, col: number, symbol: string, color: string) => {
+    // If placing on the top 2 rows, we need to add rows above and shift everything down
+    if (row <= 1) {
+      const rowsToAdd = row === 0 ? 2 : 1;
+      
+      // First, update row count
+      setCanvasState(prev => ({
+        ...prev,
+        canvasRows: prev.canvasRows + rowsToAdd
+      }));
+      
+      // Then shift all existing symbols down and add the new one
+      setGridSymbols(prev => {
+        const newMap = new Map();
+        
+        // Shift all existing symbols down by the number of rows added
+        prev.forEach((symbolData, key) => {
+          const [oldRow, oldCol] = key.split('-').map(Number);
+          const newKey = `${oldRow + rowsToAdd}-${oldCol}`;
+          newMap.set(newKey, symbolData);
+        });
+        
+        // Add the new symbol at its shifted position
+        const newSymbolKey = `${row + rowsToAdd}-${col}`;
+        newMap.set(newSymbolKey, { symbol, color });
+        
+        return newMap;
+      });
+    } else {
+      // Normal placement on existing rows
+      const cellKey = `${row}-${col}`;
+      setGridSymbols(prev => {
+        const newMap = new Map(prev);
+        newMap.set(cellKey, { symbol, color });
+        return newMap;
+      });
+    }
+  };
+
+  // Handle symbol erasing (simplified - no automatic row removal for now)
+  const handleSymbolErased = (row: number, col: number) => {
+    const cellKey = `${row}-${col}`;
+    setGridSymbols(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(cellKey);
+      return newMap;
+    });
+  };
+
+  // Redraw canvas with all symbols (accounts for dynamic canvas resizing)
+  const redrawCanvas = async () => {
+    if (!canvasRef.current) return;
+    
+    const ctx = canvasRef.current.getContext('2d');
+    if (!ctx) return;
+    
+    // Update canvas size based on current row count
+    const newHeight = canvasState.canvasRows * canvasState.gridSize;
+    if (canvasRef.current.height !== newHeight) {
+      canvasRef.current.height = newHeight;
+    }
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    
+    // Redraw grid if enabled
+    if (canvasState.showGrid) {
+      drawGrid(ctx, canvasRef.current.width, canvasRef.current.height, canvasState.gridSize);
+    }
+    
+    // Import the symbol drawing function once
+    const { drawCrochetSymbol } = await import('@/lib/crochet-symbols');
+    
+    // Redraw all symbols
+    gridSymbols.forEach(({ symbol, color }, cellKey) => {
+      const [row, col] = cellKey.split('-').map(Number);
+      // Ensure symbol is within current canvas bounds
+      if (row < canvasState.canvasRows && col < canvasState.canvasCols) {
+        const x = col * canvasState.gridSize + canvasState.gridSize / 2;
+        const y = row * canvasState.gridSize + canvasState.gridSize / 2;
+        
+        drawCrochetSymbol(ctx, symbol, x, y, color, canvasState.gridSize);
+      }
+    });
+  };
+
+  // Helper function for drawing grid (moved from canvas component)
+  const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, gridSize: number) => {
+    ctx.strokeStyle = 'rgba(156, 163, 175, 0.6)';
+    ctx.lineWidth = 1;
+    
+    // Draw vertical lines
+    for (let x = 0; x <= width; x += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(x + 0.5, 0);
+      ctx.lineTo(x + 0.5, height);
+      ctx.stroke();
+    }
+    
+    // Draw horizontal lines
+    for (let y = 0; y <= height; y += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(0, y + 0.5);
+      ctx.lineTo(width, y + 0.5);
+      ctx.stroke();
+    }
+  };
+
   const [patternInfo, setPatternInfo] = useState<PatternInfo>({
     title: '',
     description: '',
@@ -65,183 +184,106 @@ export default function PatternDesigner() {
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
 
-  // Automatically redraw canvas when rows change or symbols are updated
-  useEffect(() => {
-    redrawCanvas();
-  }, [canvasState.canvasRows, canvasState.canvasCols, canvasState.gridSize, gridSymbols]);
+  const { data: patterns } = useQuery({
+    queryKey: ['/api/patterns'],
+  });
 
-  // Symbol placement and removal handlers
-  const handleSymbolPlaced = (row: number, col: number, symbol: string, color: string) => {
-    const key = `${row}-${col}`;
-    setGridSymbols(prev => {
-      const newSymbols = new Map(prev);
-      newSymbols.set(key, { symbol, color });
-      return newSymbols;
-    });
-
-    // If placing on the top row, add a new row above
-    if (row === 0) {
-      setCanvasState(prev => ({
-        ...prev,
-        canvasRows: prev.canvasRows + 1
-      }));
-      
-      // Update all existing symbol positions (shift down by 1 row)
-      setGridSymbols(prev => {
-        const newSymbols = new Map<string, { symbol: string; color: string }>();
-        prev.forEach((value, oldKey) => {
-          const [oldRow, oldCol] = oldKey.split('-').map(Number);
-          const newKey = `${oldRow + 1}-${oldCol}`;
-          newSymbols.set(newKey, value);
-        });
-        // Add the new symbol at the new top row
-        newSymbols.set(`0-${col}`, { symbol, color });
-        return newSymbols;
-      });
-    }
-  };
-
-  const handleSymbolErased = (row: number, col: number) => {
-    const key = `${row}-${col}`;
-    setGridSymbols(prev => {
-      const newSymbols = new Map(prev);
-      newSymbols.delete(key);
-      return newSymbols;
-    });
-
-    // Check if top rows are now empty and can be removed
-    setTimeout(() => {
-      setCanvasState(prev => {
-        let newRows = prev.canvasRows;
-        
-        // Remove empty top rows, but keep at least 3 rows
-        while (newRows > 3) {
-          const topRowHasSymbols = Array.from(gridSymbols.keys()).some(key => {
-            const [row] = key.split('-').map(Number);
-            return row === 0;
-          });
-          
-          if (topRowHasSymbols) break;
-          
-          newRows--;
-          // Shift all remaining symbols up by one row
-          setGridSymbols(prevSymbols => {
-            const newSymbols = new Map<string, { symbol: string; color: string }>();
-            prevSymbols.forEach((value, oldKey) => {
-              const [oldRow, oldCol] = oldKey.split('-').map(Number);
-              if (oldRow > 0) { // Skip the top row being removed
-                const newKey = `${oldRow - 1}-${oldCol}`;
-                newSymbols.set(newKey, value);
-              }
-            });
-            return newSymbols;
-          });
-        }
-        
-        return { ...prev, canvasRows: newRows };
-      });
-    }, 10); // Small delay to ensure state updates complete
-  };
-
-  const redrawCanvas = () => {
-    if (!canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw grid if enabled
-    if (canvasState.showGrid) {
-      drawGrid(ctx, canvas.width, canvas.height, canvasState.gridSize);
-    }
-    
-    // Draw symbols
-    gridSymbols.forEach((symbolData, key) => {
-      const [row, col] = key.split('-').map(Number);
-      const x = col * canvasState.gridSize + canvasState.gridSize / 2;
-      const y = row * canvasState.gridSize + canvasState.gridSize / 2;
-      
-      ctx.fillStyle = symbolData.color;
-      ctx.font = `${canvasState.gridSize * 0.6}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(symbolData.symbol, x, y);
-    });
-  };
-
-  const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, gridSize: number) => {
-    ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 1;
-    
-    // Draw vertical lines
-    for (let x = 0; x <= width; x += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
-      ctx.stroke();
-    }
-    
-    // Draw horizontal lines
-    for (let y = 0; y <= height; y += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
-    }
-  };
-
-  const handleSaveCanvas = async () => {
-    if (!canvasRef.current) return;
-    
-    // Save to IndexedDB
-    try {
-      const canvasData = canvasRef.current.toDataURL();
-      const patternData = {
-        title: patternInfo.title || 'Untitled Pattern',
-        description: patternInfo.description || '',
-        hookSize: patternInfo.hookSize,
-        yarnWeight: patternInfo.yarnWeight,
-        difficulty: patternInfo.difficulty,
-        canvasData,
-        gridSymbols: Object.fromEntries(gridSymbols),
-        canvasRows: canvasState.canvasRows,
-        canvasCols: canvasState.canvasCols,
-        gridSize: canvasState.gridSize,
-        canvasWidth: canvasRef.current.width,
-        canvasHeight: canvasRef.current.height,
-      };
-
-      if (currentPatternId) {
-        await indexedDBStorage.updatePattern(currentPatternId, patternData);
-        toast({
-          title: "Pattern updated",
-          description: "Your pattern has been updated successfully.",
-        });
-      } else {
-        const id = await indexedDBStorage.savePattern(patternData);
-        setCurrentPatternId(id);
-        toast({
-          title: "Pattern saved",
-          description: "Your pattern has been saved to your device.",
-        });
-      }
-      setShowSaveModal(false);
-    } catch (error) {
+  const savePatternMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest('POST', '/api/patterns', data);
+    },
+    onSuccess: (pattern: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/patterns'] });
+      setCurrentPatternId(pattern.id);
       toast({
-        title: "Save failed",
+        title: "Pattern saved offline",
+        description: `"${pattern.title}" has been saved to your device.`,
+      });
+      setShowSaveModal(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
         description: "Failed to save pattern. Please try again.",
         variant: "destructive",
       });
+    },
+  });
+
+  const updatePatternMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      return await apiRequest('PUT', `/api/patterns/${id}`, data);
+    },
+    onSuccess: (pattern: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/patterns'] });
+      toast({
+        title: "Pattern updated offline",
+        description: `"${pattern.title}" has been updated on your device.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update pattern. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSaveCanvas = () => {
+    if (!canvasRef.current) return;
+    
+    const canvas = canvasRef.current;
+    const canvasData = canvas.toDataURL();
+    
+    const patternData = {
+      canvasState,
+      history: history.slice(0, historyIndex + 1),
+    };
+
+    // Convert gridSymbols Map to plain object for storage
+    const gridSymbolsObj: Record<string, { symbol: string; color: string }> = {};
+    gridSymbols.forEach((value, key) => {
+      gridSymbolsObj[key] = value;
+    });
+
+    const data = {
+      ...patternInfo,
+      canvasData,
+      canvasWidth: canvas.width,
+      canvasHeight: canvas.height,
+      gridSize: canvasState.gridSize,
+      canvasRows: canvasState.canvasRows,
+      canvasCols: canvasState.canvasCols,
+      gridSymbols: gridSymbolsObj,
+      patternElements: patternData,
+    };
+
+    if (currentPatternId) {
+      updatePatternMutation.mutate({ id: currentPatternId, data });
+    } else {
+      savePatternMutation.mutate(data);
     }
+  };
+
+  const handleExportImage = () => {
+    if (!canvasRef.current) return;
+    
+    const canvas = canvasRef.current;
+    const link = document.createElement('a');
+    link.download = `${patternInfo.title || 'crochet-pattern'}.png`;
+    link.href = canvas.toDataURL();
+    link.click();
+    
+    toast({
+      title: "Pattern exported",
+      description: "Your pattern has been exported as an image.",
+    });
   };
 
   const handleLoadPattern = (pattern: any) => {
     setPatternInfo({
       title: pattern.title || '',
-      description: pattern.description || '',
       hookSize: pattern.hookSize || '5.0mm (H)',
       yarnWeight: pattern.yarnWeight || 'Medium (4)',
       gauge: pattern.gauge || '',
@@ -293,21 +335,6 @@ export default function PatternDesigner() {
     });
   };
 
-  const handleExportImage = () => {
-    if (!canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const link = document.createElement('a');
-    link.download = `${patternInfo.title || 'crochet-pattern'}.png`;
-    link.href = canvas.toDataURL();
-    link.click();
-    
-    toast({
-      title: "Pattern exported",
-      description: "Your pattern has been exported as an image.",
-    });
-  };
-
   const handleUndo = () => {
     if (historyIndex > 0) {
       setHistoryIndex(historyIndex - 1);
@@ -345,19 +372,23 @@ export default function PatternDesigner() {
   };
 
   const handleClearCanvas = () => {
-    if (!canvasRef.current) return;
-    
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      setGridSymbols(new Map());
-      setCanvasState(prev => ({ ...prev, canvasRows: 3 })); // Reset to 3 rows
-      
-      if (canvasState.showGrid) {
-        drawGrid(ctx, canvas.width, canvas.height, canvasState.gridSize);
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        setGridSymbols(new Map()); // Clear symbol tracking
+        // Reset to 3 rows when cleared (1 working + 2 empty)
+        setCanvasState(prev => ({
+          ...prev,
+          canvasRows: 3
+        }));
+        // Redraw grid if enabled
+        if (canvasState.showGrid) {
+          drawGrid(ctx, canvas.width, canvas.height, canvasState.gridSize);
+        }
+        saveToHistory();
       }
-      saveToHistory();
     }
   };
 
@@ -396,6 +427,7 @@ export default function PatternDesigner() {
             </Button>
             <Button
               onClick={handleSaveCanvas}
+              disabled={false}
               className="bg-primary hover:bg-primary/90"
             >
               <Save className="w-4 h-4 mr-2" />
