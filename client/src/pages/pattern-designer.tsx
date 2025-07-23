@@ -111,7 +111,10 @@ export default function PatternDesigner() {
       // Skip occupied markers - only draw actual symbols
       if (symbol.symbol === 'occupied') return;
       
-      const x = symbol.col * canvasState.gridSize + canvasState.gridSize / 2;
+      // For multi-cell symbols, center them across their width
+      const symbolWidth = symbol.width || 1;
+      const centerOffset = (symbolWidth - 1) * canvasState.gridSize / 2;
+      const x = symbol.col * canvasState.gridSize + canvasState.gridSize / 2 + centerOffset;
       const y = symbol.row * canvasState.gridSize + canvasState.gridSize / 2;
       
       drawCrochetSymbol(ctx, symbol.symbol, x, y, symbol.color, canvasState.gridSize * 0.8);

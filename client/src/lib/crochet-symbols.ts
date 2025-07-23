@@ -136,45 +136,45 @@ export function drawCrochetSymbol(
       break;
 
     case '2dctog':
-      // 2 DC together - two vertical lines converging at top
+      // 2 DC together - two vertical lines converging at top, spans 2 cells
       ctx.beginPath();
-      // Left DC line
-      ctx.moveTo(centerX - size * 0.3, y + size * 0.9);
-      ctx.lineTo(centerX - size * 0.3, y + size * 0.3);
+      // Left DC line (spans to left edge of symbol)
+      ctx.moveTo(centerX - size * 0.8, y + size * 0.9);
+      ctx.lineTo(centerX - size * 0.8, y + size * 0.3);
       ctx.lineTo(centerX, y + size * 0.1);
-      // Right DC line
-      ctx.moveTo(centerX + size * 0.3, y + size * 0.9);
-      ctx.lineTo(centerX + size * 0.3, y + size * 0.3);
+      // Right DC line (spans to right edge of symbol)
+      ctx.moveTo(centerX + size * 0.8, y + size * 0.9);
+      ctx.lineTo(centerX + size * 0.8, y + size * 0.3);
       ctx.lineTo(centerX, y + size * 0.1);
-      // Cross lines
-      ctx.moveTo(centerX - size * 0.3, y + size * 0.5);
-      ctx.lineTo(centerX - size * 0.1, y + size * 0.4);
-      ctx.moveTo(centerX + size * 0.1, y + size * 0.4);
-      ctx.lineTo(centerX + size * 0.3, y + size * 0.5);
+      // Cross lines on each DC
+      ctx.moveTo(centerX - size * 0.8, y + size * 0.5);
+      ctx.lineTo(centerX - size * 0.5, y + size * 0.4);
+      ctx.moveTo(centerX + size * 0.5, y + size * 0.4);
+      ctx.lineTo(centerX + size * 0.8, y + size * 0.5);
       ctx.stroke();
       break;
 
     case '3dctog':
-      // 3 DC together - three vertical lines converging at top
+      // 3 DC together - three vertical lines converging at top, spans 3 cells
       ctx.beginPath();
-      // Left DC line
-      ctx.moveTo(centerX - size * 0.4, y + size * 0.9);
-      ctx.lineTo(centerX - size * 0.4, y + size * 0.3);
+      // Left DC line (spans to left edge)
+      ctx.moveTo(centerX - size * 1.2, y + size * 0.9);
+      ctx.lineTo(centerX - size * 1.2, y + size * 0.3);
       ctx.lineTo(centerX, y + size * 0.1);
       // Middle DC line
       ctx.moveTo(centerX, y + size * 0.9);
       ctx.lineTo(centerX, y + size * 0.2);
-      // Right DC line
-      ctx.moveTo(centerX + size * 0.4, y + size * 0.9);
-      ctx.lineTo(centerX + size * 0.4, y + size * 0.3);
+      // Right DC line (spans to right edge)
+      ctx.moveTo(centerX + size * 1.2, y + size * 0.9);
+      ctx.lineTo(centerX + size * 1.2, y + size * 0.3);
       ctx.lineTo(centerX, y + size * 0.1);
-      // Cross lines
-      ctx.moveTo(centerX - size * 0.4, y + size * 0.5);
-      ctx.lineTo(centerX - size * 0.25, y + size * 0.4);
-      ctx.moveTo(centerX - size * 0.15, y + size * 0.45);
-      ctx.lineTo(centerX + size * 0.15, y + size * 0.45);
-      ctx.moveTo(centerX + size * 0.25, y + size * 0.4);
-      ctx.lineTo(centerX + size * 0.4, y + size * 0.5);
+      // Cross lines on each DC
+      ctx.moveTo(centerX - size * 1.2, y + size * 0.5);
+      ctx.lineTo(centerX - size * 0.9, y + size * 0.4);
+      ctx.moveTo(centerX - size * 0.2, y + size * 0.45);
+      ctx.lineTo(centerX + size * 0.2, y + size * 0.45);
+      ctx.moveTo(centerX + size * 0.9, y + size * 0.4);
+      ctx.lineTo(centerX + size * 1.2, y + size * 0.5);
       ctx.stroke();
       break;
 
