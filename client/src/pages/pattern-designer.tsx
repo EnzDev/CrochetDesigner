@@ -57,40 +57,36 @@ export default function PatternDesigner() {
     redrawCanvas();
   }, [canvasState.canvasRows, gridSymbols, canvasState.showGrid]);
 
-  // Handle symbol placement to expand rows (crochet grows upward)
+  // Handle symbol placement with simplified row expansion
   const handleSymbolPlaced = (row: number, col: number, symbol: string, color: string) => {
-    // If placing on the top row (row 0), add a new row above and shift everything down
+    const cellKey = `${row}-${col}`;
+    
+    // Always place the symbol where the user clicked
+    setGridSymbols(prev => {
+      const newMap = new Map(prev);
+      newMap.set(cellKey, { symbol, color });
+      return newMap;
+    });
+    
+    // If placing on the top row (row 0), add a new row above
     if (row === 0) {
       setCanvasState(prev => ({
         ...prev,
         canvasRows: prev.canvasRows + 1
       }));
       
-      // Shift all existing symbols down by one row and add the new symbol at the clicked position
-      setGridSymbols(prev => {
-        const newMap = new Map();
-        
-        // First, shift all existing symbols down by one row
-        prev.forEach((symbolData, key) => {
-          const [oldRow, oldCol] = key.split('-').map(Number);
-          const newKey = `${oldRow + 1}-${oldCol}`;
-          newMap.set(newKey, symbolData);
+      // Shift all symbols down by updating their row indices
+      setTimeout(() => {
+        setGridSymbols(prev => {
+          const newMap = new Map();
+          prev.forEach((symbolData, key) => {
+            const [oldRow, oldCol] = key.split('-').map(Number);
+            const newKey = `${oldRow + 1}-${oldCol}`;
+            newMap.set(newKey, symbolData);
+          });
+          return newMap;
         });
-        
-        // Add the new symbol at row 1 (where the user clicked, now shifted down)
-        const cellKey = `1-${col}`;
-        newMap.set(cellKey, { symbol, color });
-        
-        return newMap;
-      });
-    } else {
-      // Regular placement on existing rows
-      const cellKey = `${row}-${col}`;
-      setGridSymbols(prev => {
-        const newMap = new Map(prev);
-        newMap.set(cellKey, { symbol, color });
-        return newMap;
-      });
+      }, 0);
     }
   };
 
