@@ -16,6 +16,7 @@ export interface CanvasState {
   color: string;
   gridSize: number;
   showGrid: boolean;
+  gridStyle: 'basic' | 'every10' | 'every50';
   zoom: number;
   canvasRows: number;
   canvasCols: number;
@@ -44,6 +45,7 @@ export default function PatternDesigner() {
     color: '#000000',
     gridSize: 20,
     showGrid: true,
+    gridStyle: 'basic',
     zoom: 100,
     canvasRows: 3, // Start with 3 rows (1 working row + 2 empty rows above)
     canvasCols: 40, // Default number of columns
@@ -71,8 +73,12 @@ export default function PatternDesigner() {
       canvasCols: patternState.cols,
       gridSize: patternState.gridSize
     }));
-    redrawCanvas();
   }, [patternState]);
+
+  // Redraw canvas when canvas state or pattern state changes
+  useEffect(() => {
+    redrawCanvas();
+  }, [canvasState, patternState]);
 
   // Symbol placement and removal handlers
   const handleSymbolPlaced = (row: number, col: number, symbol: string, color: string) => {
@@ -110,11 +116,26 @@ export default function PatternDesigner() {
   };
 
   const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, gridSize: number) => {
+    // Basic grid lines
     ctx.strokeStyle = '#e0e0e0';
     ctx.lineWidth = 1;
     
     // Draw vertical lines
     for (let x = 0; x <= width; x += gridSize) {
+      const colIndex = x / gridSize;
+      
+      // Set line style based on grid preferences
+      if (canvasState.gridStyle === 'every50' && colIndex % 50 === 0) {
+        ctx.strokeStyle = '#ff6b6b'; // Red for every 50
+        ctx.lineWidth = 2;
+      } else if (canvasState.gridStyle !== 'basic' && colIndex % 10 === 0) {
+        ctx.strokeStyle = '#4ecdc4'; // Teal for every 10
+        ctx.lineWidth = 1.5;
+      } else {
+        ctx.strokeStyle = '#e0e0e0'; // Light gray for regular
+        ctx.lineWidth = 1;
+      }
+      
       ctx.beginPath();
       ctx.moveTo(x, 0);
       ctx.lineTo(x, height);
@@ -123,6 +144,20 @@ export default function PatternDesigner() {
     
     // Draw horizontal lines
     for (let y = 0; y <= height; y += gridSize) {
+      const rowIndex = y / gridSize;
+      
+      // Set line style based on grid preferences
+      if (canvasState.gridStyle === 'every50' && rowIndex % 50 === 0) {
+        ctx.strokeStyle = '#ff6b6b'; // Red for every 50
+        ctx.lineWidth = 2;
+      } else if (canvasState.gridStyle !== 'basic' && rowIndex % 10 === 0) {
+        ctx.strokeStyle = '#4ecdc4'; // Teal for every 10
+        ctx.lineWidth = 1.5;
+      } else {
+        ctx.strokeStyle = '#e0e0e0'; // Light gray for regular
+        ctx.lineWidth = 1;
+      }
+      
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(width, y);

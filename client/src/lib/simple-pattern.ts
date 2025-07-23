@@ -124,6 +124,11 @@ export class SimplePatternManager {
     this.pattern.symbols = this.pattern.symbols.filter(s => s.col < cols);
   }
 
+  setGridSize(gridSize: number): void {
+    if (gridSize < 10 || gridSize > 50) return;
+    this.pattern.gridSize = gridSize;
+  }
+
   // Fill rectangle
   fillRectangle(startRow: number, startCol: number, endRow: number, endCol: number, symbol: string, color: string): void {
     const minRow = Math.min(startRow, endRow);

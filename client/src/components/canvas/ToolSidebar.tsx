@@ -154,9 +154,31 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
               onChange={(e) => {
                 const value = parseInt(e.target.value) || 20;
                 setCanvasState(prev => ({ ...prev, gridSize: value }));
+                // Update the pattern manager grid size
+                simplePattern.setGridSize(value);
+                onPatternChange();
               }}
               className="mt-1"
             />
+          </div>
+
+          <div>
+            <Label className="text-sm text-craft-600">Grid Style</Label>
+            <Select
+              value={canvasState.gridStyle}
+              onValueChange={(value: 'basic' | 'every10' | 'every50') => 
+                setCanvasState(prev => ({ ...prev, gridStyle: value }))
+              }
+            >
+              <SelectTrigger className="w-full mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="basic">Basic Grid</SelectItem>
+                <SelectItem value="every10">Highlight Every 10</SelectItem>
+                <SelectItem value="every50">Highlight 10 & 50</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
