@@ -340,33 +340,47 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
           </div>
         </div>
 
-        {/* Canvas Area */}
-        <div className="flex-1 p-6 overflow-auto" ref={containerRef}>
-          <div className="bg-white rounded-lg shadow-sm border border-craft-200 p-6">
-            <div className="relative">
-              <canvas
-                ref={ref}
-                className={cn(
-                  "border border-craft-300 rounded-lg",
-                  canvasState.tool === 'pen' && canvasState.symbol 
-                    ? "cursor-pointer" 
-                    : canvasState.tool === 'fill' && canvasState.symbol
-                    ? "cursor-cell"
-                    : canvasState.tool === 'eraser'
-                    ? "cursor-grab"
-                    : "cursor-crosshair"
-                )}
-                width={canvasWidth}
-                height={canvasHeight}
-                onMouseDown={handleStartDrawing}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleStopDrawing}
-                onMouseLeave={handleStopDrawing}
-                onTouchStart={handleStartDrawing}
-                onTouchMove={handleDrawing}
-                onTouchEnd={handleStopDrawing}
-                onTouchCancel={handleStopDrawing}
-              />
+        {/* Canvas Area with Dedicated Scrollbars */}
+        <div 
+          className="flex-1 overflow-auto bg-craft-50" 
+          ref={containerRef}
+          style={{
+            scrollbarWidth: 'auto',
+            scrollbarColor: '#cbd5e1 #f1f5f9'
+          }}
+        >
+          <div className="p-6 min-w-fit min-h-fit">
+            <div className="bg-white rounded-lg shadow-sm border border-craft-200 p-6 inline-block">
+              <div className="relative">
+                <canvas
+                  ref={ref}
+                  className={cn(
+                    "border border-craft-300 rounded-lg block",
+                    canvasState.tool === 'pen' && canvasState.symbol 
+                      ? "cursor-pointer" 
+                      : canvasState.tool === 'fill' && canvasState.symbol
+                      ? "cursor-cell"
+                      : canvasState.tool === 'eraser'
+                      ? "cursor-grab"
+                      : "cursor-crosshair"
+                  )}
+                  width={canvasWidth}
+                  height={canvasHeight}
+                  style={{
+                    width: `${canvasWidth}px`,
+                    height: `${canvasHeight}px`,
+                    minWidth: `${canvasWidth}px`,
+                    minHeight: `${canvasHeight}px`
+                  }}
+                  onMouseDown={handleStartDrawing}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleStopDrawing}
+                  onMouseLeave={handleStopDrawing}
+                  onTouchStart={handleStartDrawing}
+                  onTouchMove={handleDrawing}
+                  onTouchEnd={handleStopDrawing}
+                  onTouchCancel={handleStopDrawing}
+                />
               
               {/* Canvas overlay for info */}
               <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-2 shadow-sm">
@@ -401,6 +415,7 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
                   }}
                 />
               )}
+              </div>
             </div>
           </div>
         </div>
