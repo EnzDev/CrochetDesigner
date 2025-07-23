@@ -54,74 +54,57 @@ export default function PatternDesigner() {
 
   // Automatically redraw canvas when rows change or symbols are updated
   useEffect(() => {
-    redrawCanvas();
+    const timeoutId = setTimeout(() => {
+      redrawCanvas();
+    }, 10); // Small delay to ensure state is fully updated
+    
+    return () => clearTimeout(timeoutId);
   }, [canvasState.canvasRows, gridSymbols, canvasState.showGrid]);
 
-  // Handle symbol placement with simplified row expansion
+  // Handle symbol placement with proper row expansion
   const handleSymbolPlaced = (row: number, col: number, symbol: string, color: string) => {
-    const cellKey = `${row}-${col}`;
-    
-    // Always place the symbol where the user clicked
-    setGridSymbols(prev => {
-      const newMap = new Map(prev);
-      newMap.set(cellKey, { symbol, color });
-      return newMap;
-    });
-    
-    // If placing on the top row (row 0), add a new row above
+    // If placing on the top row (row 0), we need to add a row above and shift everything
     if (row === 0) {
+      // Increment row count first
       setCanvasState(prev => ({
         ...prev,
         canvasRows: prev.canvasRows + 1
       }));
       
-      // Shift all symbols down by updating their row indices
-      setTimeout(() => {
-        setGridSymbols(prev => {
-          const newMap = new Map();
-          prev.forEach((symbolData, key) => {
-            const [oldRow, oldCol] = key.split('-').map(Number);
-            const newKey = `${oldRow + 1}-${oldCol}`;
-            newMap.set(newKey, symbolData);
-          });
-          return newMap;
+      // Shift all existing symbols down and add the new one
+      setGridSymbols(prev => {
+        const newMap = new Map();
+        
+        // Shift existing symbols down by 1 row
+        prev.forEach((symbolData, key) => {
+          const [oldRow, oldCol] = key.split('-').map(Number);
+          const shiftedKey = `${oldRow + 1}-${oldCol}`;
+          newMap.set(shiftedKey, symbolData);
         });
-      }, 0);
+        
+        // Add the new symbol at the position it will be after shifting (row 1)
+        const newSymbolKey = `1-${col}`;
+        newMap.set(newSymbolKey, { symbol, color });
+        
+        return newMap;
+      });
+    } else {
+      // Normal placement on existing rows
+      const cellKey = `${row}-${col}`;
+      setGridSymbols(prev => {
+        const newMap = new Map(prev);
+        newMap.set(cellKey, { symbol, color });
+        return newMap;
+      });
     }
   };
 
-  // Handle symbol erasing with smart row management
+  // Handle symbol erasing (simplified - no automatic row removal for now)
   const handleSymbolErased = (row: number, col: number) => {
     const cellKey = `${row}-${col}`;
     setGridSymbols(prev => {
       const newMap = new Map(prev);
       newMap.delete(cellKey);
-      
-      // Check if the top row is now empty and can be removed
-      const topRowHasSymbols = Array.from(newMap.keys()).some(key => {
-        const [symbolRow] = key.split('-').map(Number);
-        return symbolRow === 0;
-      });
-      
-      // If top row is empty and we have more than 1 row, remove it and shift everything up
-      if (!topRowHasSymbols && canvasState.canvasRows > 1) {
-        const shiftedMap = new Map();
-        newMap.forEach((symbolData, key) => {
-          const [oldRow, oldCol] = key.split('-').map(Number);
-          if (oldRow > 0) {
-            const newKey = `${oldRow - 1}-${oldCol}`;
-            shiftedMap.set(newKey, symbolData);
-          }
-        });
-        
-        setCanvasState(prev => ({
-          ...prev,
-          canvasRows: prev.canvasRows - 1
-        }));
-        
-        return shiftedMap;
-      }
-      
       return newMap;
     });
   };
