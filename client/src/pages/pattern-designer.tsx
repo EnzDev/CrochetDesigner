@@ -180,8 +180,7 @@ export default function PatternDesigner() {
         targetRow + symbol.row,
         targetCol + symbol.col,
         symbol.symbol,
-        symbol.color,
-        symbol.mirrored || false
+        symbol.color
       );
     });
     
@@ -242,10 +241,10 @@ export default function PatternDesigner() {
       // Skip occupied markers - only draw actual symbols
       if (symbol.symbol === 'occupied') return;
       
-      // For multi-cell symbols, position them correctly without centering
+      // For multi-cell symbols, center them across their width
       const symbolWidth = symbol.width || 1;
-      // Don't add center offset - symbols should be positioned at their leftmost cell
-      const x = symbol.col * canvasState.gridSize + canvasState.gridSize / 2;
+      const centerOffset = (symbolWidth - 1) * canvasState.gridSize / 2;
+      const x = symbol.col * canvasState.gridSize + canvasState.gridSize / 2 + centerOffset;
       const y = symbol.row * canvasState.gridSize + canvasState.gridSize / 2;
       
       // Check if symbol should be mirrored (for decrease stitches)
@@ -592,8 +591,7 @@ export default function PatternDesigner() {
           col: s.col,
           symbol: s.symbol || s.symbolType,
           color: s.color,
-          width: s.width || 1,
-          mirrored: s.mirrored || false
+          width: s.width || 1
         }));
       } else {
         symbols = Object.entries(pattern.gridSymbols).map(([key, value]: [string, any]) => {
@@ -603,8 +601,7 @@ export default function PatternDesigner() {
             col,
             symbol: value.symbol || value.symbolType,
             color: value.color,
-            width: value.width || 1,
-            mirrored: value.mirrored || false
+            width: value.width || 1
           };
         });
       }
