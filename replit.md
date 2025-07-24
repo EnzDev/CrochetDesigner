@@ -30,6 +30,11 @@ Priority: Fix top row drawing issues - critical for crochet pattern construction
   - Added startCol tracking and proper symbol shifting for left column operations
   - Purple "START" line marks column 0 reference point
   - Add/Remove Left buttons properly shift existing stitches physically
+  - Enhanced canvas scrolling with proper desktop scrollbar styling
+  - Added corner resize handles on selections with cursor feedback
+  - Implemented color changing for selected symbols when color picker changes
+  - Added raw JSON export functionality for pattern data exchange
+  - Made app a Progressive Web App (PWA) with offline capability and app installation
 
 ## System Architecture
 

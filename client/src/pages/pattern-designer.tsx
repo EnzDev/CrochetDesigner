@@ -434,6 +434,53 @@ export default function PatternDesigner() {
     }
   };
 
+  const handleExportJSON = () => {
+    const exportData = {
+      metadata: {
+        title: patternInfo.title || 'Untitled Pattern',
+        description: patternInfo.description || '',
+        hookSize: patternInfo.hookSize,
+        yarnWeight: patternInfo.yarnWeight,
+        difficulty: patternInfo.difficulty,
+        gauge: patternInfo.gauge,
+        notes: patternInfo.notes,
+        materials: patternInfo.materials,
+        exportDate: new Date().toISOString(),
+        version: '1.0'
+      },
+      canvas: {
+        rows: patternState.rows,
+        cols: patternState.cols,
+        gridSize: patternState.gridSize,
+        startCol: patternState.startCol
+      },
+      symbols: patternState.symbols.filter(s => s.symbol !== 'occupied').map(s => ({
+        row: s.row,
+        col: s.col,
+        symbol: s.symbol,
+        color: s.color,
+        width: s.width || 1
+      }))
+    };
+
+    const jsonString = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${patternInfo.title || 'pattern'}-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Pattern exported",
+      description: "JSON file has been downloaded to your device.",
+    });
+  };
+
   const handleLoadPattern = (pattern: any) => {
     setPatternInfo({
       title: pattern.title || '',
@@ -589,7 +636,15 @@ export default function PatternDesigner() {
               className="bg-accent hover:bg-accent/90"
             >
               <Download className="w-4 h-4 mr-2" />
-              Export
+              PNG
+            </Button>
+            <Button
+              onClick={handleExportJSON}
+              variant="outline"
+              className="text-craft-600 hover:text-craft-800"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              JSON
             </Button>
           </div>
         </div>
