@@ -141,7 +141,12 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
 
       {/* Color Palette */}
       <div className="mb-6">
-        <h3 className="text-sm font-medium text-craft-700 mb-3">Yarn Colors</h3>
+        <h3 className="text-sm font-medium text-craft-700 mb-3">
+          Yarn Colors
+          {canvasState.tool === 'select' && hasSelection && (
+            <span className="text-xs text-accent ml-2">(changes selected symbols)</span>
+          )}
+        </h3>
         <div className="grid grid-cols-6 gap-2 sm:grid-cols-4 md:grid-cols-6">
           {colors.map((color) => (
             <button

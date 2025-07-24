@@ -94,6 +94,21 @@ export default function PatternDesigner() {
     redrawCanvas();
   }, [canvasState, patternState, selection]);
 
+  // Watch for color changes when there's an active selection
+  useEffect(() => {
+    if (selection && canvasState.tool === 'select') {
+      // Change color of selected symbols when color picker changes
+      simplePattern.changeSelectionColor(
+        Math.min(selection.startRow, selection.endRow),
+        Math.min(selection.startCol, selection.endCol),
+        Math.max(selection.startRow, selection.endRow),
+        Math.max(selection.startCol, selection.endCol),
+        canvasState.color
+      );
+      setPatternState(simplePattern.getPattern());
+    }
+  }, [canvasState.color]); // Only depend on color change, not selection to avoid loops
+
   // Keyboard shortcuts for copy/paste
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

@@ -225,6 +225,27 @@ export class SimplePatternManager {
     return true;
   }
 
+  // Change color of symbols in a selection area
+  changeSelectionColor(startRow: number, startCol: number, endRow: number, endCol: number, newColor: string): void {
+    const minRow = Math.min(startRow, endRow);
+    const maxRow = Math.max(startRow, endRow);
+    const minCol = Math.min(startCol, endCol);
+    const maxCol = Math.max(startCol, endCol);
+    
+    // Update color for all symbols in the selection area
+    this.pattern.symbols.forEach(symbol => {
+      // Skip occupied markers - only change actual symbols
+      if (symbol.symbol === 'occupied') return;
+      
+      if (symbol.row >= minRow && symbol.row <= maxRow && 
+          symbol.col >= minCol && symbol.col <= maxCol) {
+        symbol.color = newColor;
+      }
+    });
+    
+    this.saveToHistory();
+  }
+
   setRows(rows: number): void {
     if (rows < 1) return;
     this.pattern.rows = rows;
