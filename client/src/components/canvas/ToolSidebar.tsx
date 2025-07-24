@@ -6,6 +6,7 @@ import { Pen, Eraser, PaintBucket, MousePointer, Grid3x3, Trash2, Plus, Minus, C
 import { cn } from "@/lib/utils";
 import type { CanvasState } from "@/pages/pattern-designer";
 import { simplePattern } from "@/lib/simple-pattern";
+import { useEffect, useState } from "react";
 
 interface ToolSidebarProps {
   canvasState: CanvasState;
@@ -27,15 +28,38 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
   ] as const;
 
   const symbols = [
-    { id: 'chain', label: 'Chain', preview: '○' },
-    { id: 'sc', label: 'SC', preview: '×' },
-    { id: 'dc', label: 'DC', preview: '┃' },
-    { id: 'tr', label: 'TR', preview: '┬' },
-    { id: 'sl', label: 'SL ST', preview: '━' },
-    { id: 'yo', label: 'YO', preview: '○' },
-    { id: '2dctog', label: '2DC Tog', preview: '╱' },
-    { id: '3dctog', label: '3DC Tog', preview: '╲' },
+    { id: 'chain', label: 'Chain' },
+    { id: 'sc', label: 'SC' },
+    { id: 'dc', label: 'DC' },
+    { id: 'tr', label: 'TR' },
+    { id: 'sl', label: 'SL ST' },
+    { id: 'yo', label: 'YO' },
+    { id: '2dctog', label: '2DC Tog' },
+    { id: '3dctog', label: '3DC Tog' },
   ];
+
+  const [symbolPreviews, setSymbolPreviews] = useState<{[key: string]: string}>({});
+
+  useEffect(() => {
+    // Generate canvas-based previews for each symbol
+    const previews: {[key: string]: string} = {};
+    
+    symbols.forEach(symbol => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 32;
+      canvas.height = 32;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        // Import and use the actual drawing function
+        import('@/lib/crochet-symbols').then(({ drawCrochetSymbol }) => {
+          drawCrochetSymbol(ctx, symbol.id, 16, 16, '#374151', 16);
+          previews[symbol.id] = canvas.toDataURL();
+          setSymbolPreviews(prev => ({ ...prev, [symbol.id]: canvas.toDataURL() }));
+        });
+      }
+    });
+  }, []);
 
   const colors = [
     { name: 'Black', value: '#000000' },
@@ -103,8 +127,16 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
                 }));
               }}
             >
-              <div className="w-8 h-8 flex items-center justify-center text-lg font-bold text-craft-800">
-                {symbol.preview}
+              <div className="w-8 h-8 flex items-center justify-center">
+                {symbolPreviews[symbol.id] ? (
+                  <img 
+                    src={symbolPreviews[symbol.id]} 
+                    alt={symbol.label}
+                    className="w-8 h-8"
+                  />
+                ) : (
+                  <div className="w-4 h-4 bg-craft-300 rounded animate-pulse" />
+                )}
               </div>
               <span className="text-xs text-craft-600">{symbol.label}</span>
             </Button>

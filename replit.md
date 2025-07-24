@@ -7,7 +7,7 @@ This is a full-stack web application for designing and managing crochet patterns
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
-Priority: Fixed symbol selection behavior and improved visual representation of crochet symbols.
+Priority: Enhanced crochet symbol display to match canvas rendering and fixed decrease stitch positioning.
 
 ## Recent Changes
 
@@ -42,6 +42,9 @@ Priority: Fixed symbol selection behavior and improved visual representation of 
   - Fixed symbol selection logic to prevent unintended deselection when re-clicking
   - Selection now clears automatically when switching away from select tool
   - Improved crochet symbol buttons with proper visual symbols instead of text abbreviations
+  - Updated symbol buttons to display actual canvas-rendered symbols for consistency
+  - Fixed 2dctog and 3dctog positioning to converge at right side instead of middle
+  - Implemented dynamic symbol preview generation using actual drawing functions
 
 ## System Architecture
 
