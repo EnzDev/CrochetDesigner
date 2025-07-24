@@ -15,11 +15,12 @@ interface ToolSidebarProps {
   onPatternChange: () => void;
   onCopySelection?: () => void;
   onPasteSelection?: () => void;
+  onClearSelection?: () => void;
   hasSelection?: boolean;
   hasCopiedSymbols?: boolean;
 }
 
-export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas, onPatternChange, onCopySelection, onPasteSelection, hasSelection, hasCopiedSymbols }: ToolSidebarProps) {
+export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas, onPatternChange, onCopySelection, onPasteSelection, onClearSelection, hasSelection, hasCopiedSymbols }: ToolSidebarProps) {
   const tools = [
     { id: 'pen', icon: Pen, label: 'Pen' },
     { id: 'eraser', icon: Eraser, label: 'Eraser' },
@@ -95,12 +96,18 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
                     ? "bg-accent text-white border-accent"
                     : "border-craft-200 hover:border-accent"
                 )}
-                onClick={() => setCanvasState(prev => ({ 
-                  ...prev, 
-                  tool: tool.id as any,
-                  // Clear symbol selection when switching away from pen tool
-                  ...(tool.id !== 'pen' ? { symbol: null } : {})
-                }))}
+                onClick={() => {
+                  // Clear selection when switching away from select tool
+                  if (canvasState.tool === 'select' && tool.id !== 'select' && onClearSelection) {
+                    onClearSelection();
+                  }
+                  setCanvasState(prev => ({ 
+                    ...prev, 
+                    tool: tool.id as any,
+                    // Clear symbol selection when switching away from pen and fill tools
+                    ...(tool.id !== 'pen' && tool.id !== 'fill' ? { symbol: null } : {})
+                  }));
+                }}
               >
                 <Icon className="w-4 h-4" />
                 <span className="text-xs">{tool.label}</span>

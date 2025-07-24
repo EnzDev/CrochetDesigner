@@ -742,6 +742,7 @@ export default function PatternDesigner() {
             const targetCol = selection ? Math.min(selection.startCol, selection.endCol) : 0;
             pasteSelection(targetRow, targetCol);
           }}
+          onClearSelection={() => setSelection(null)}
           hasSelection={!!selection}
           hasCopiedSymbols={copiedSymbols.length > 0}
         />
