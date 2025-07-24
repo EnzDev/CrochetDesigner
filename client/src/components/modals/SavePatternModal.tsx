@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { X, Save, FolderOpen, Trash2 } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { X, Save, FolderOpen, Trash2, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +17,9 @@ interface SavePatternModalProps {
   setPatternInfo: (info: any) => void;
   onSave: () => void;
   onLoad: (pattern: any) => void;
+  onExportImage: () => void;
+  onExportJSON: () => void;
+  onImportJSON: (file: File) => void;
   isLoading: boolean;
 }
 
@@ -27,9 +30,13 @@ export function SavePatternModal({
   setPatternInfo,
   onSave,
   onLoad,
+  onExportImage,
+  onExportJSON,
+  onImportJSON,
   isLoading
 }: SavePatternModalProps) {
-  const [activeTab, setActiveTab] = useState<'save' | 'load'>('save');
+  const [activeTab, setActiveTab] = useState<'save' | 'load' | 'export'>('save');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const { data: patterns = [] } = useQuery({
@@ -75,6 +82,24 @@ export function SavePatternModal({
     }
   };
 
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type === 'application/json') {
+      onImportJSON(file);
+      onClose();
+    } else {
+      toast({
+        title: "Invalid file",
+        description: "Please select a valid JSON file.",
+        variant: "destructive",
+      });
+    }
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -90,7 +115,7 @@ export function SavePatternModal({
             className="flex-1"
           >
             <Save className="w-4 h-4 mr-2" />
-            Save Pattern
+            Save
           </Button>
           <Button
             variant={activeTab === 'load' ? 'default' : 'ghost'}
@@ -98,7 +123,15 @@ export function SavePatternModal({
             className="flex-1"
           >
             <FolderOpen className="w-4 h-4 mr-2" />
-            Load Pattern
+            Load
+          </Button>
+          <Button
+            variant={activeTab === 'export' ? 'default' : 'ghost'}
+            onClick={() => setActiveTab('export')}
+            className="flex-1"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export
           </Button>
         </div>
 
@@ -243,6 +276,72 @@ export function SavePatternModal({
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Export Tab */}
+        {activeTab === 'export' && (
+          <div className="space-y-4">
+            <div className="grid gap-4">
+              <div className="text-center py-4">
+                <Download className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <h3 className="font-medium mb-2">Export Your Pattern</h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  Choose how you'd like to export your crochet pattern
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button
+                  onClick={() => {
+                    onExportImage();
+                    onClose();
+                  }}
+                  className="flex flex-col items-center p-6 h-auto bg-accent hover:bg-accent/90"
+                >
+                  <Download className="w-8 h-8 mb-2" />
+                  <span className="font-medium">Export as PNG</span>
+                  <span className="text-xs opacity-80">Image file for sharing</span>
+                </Button>
+
+                <Button
+                  onClick={() => {
+                    onExportJSON();
+                    onClose();
+                  }}
+                  variant="outline"
+                  className="flex flex-col items-center p-6 h-auto"
+                >
+                  <Download className="w-8 h-8 mb-2" />
+                  <span className="font-medium">Export as JSON</span>
+                  <span className="text-xs opacity-80">Data file for backup</span>
+                </Button>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-3">Import Pattern</h4>
+                <div className="flex items-center gap-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <Button
+                    onClick={() => fileInputRef.current?.click()}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Import JSON Pattern
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Import a pattern from a previously exported JSON file
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </DialogContent>

@@ -481,6 +481,59 @@ export default function PatternDesigner() {
     });
   };
 
+  const handleImportJSON = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const jsonData = JSON.parse(e.target?.result as string);
+        
+        // Validate JSON structure
+        if (!jsonData.metadata || !jsonData.canvas || !jsonData.symbols) {
+          throw new Error('Invalid JSON structure');
+        }
+
+        // Load pattern info from metadata
+        setPatternInfo({
+          title: jsonData.metadata.title || 'Imported Pattern',
+          description: jsonData.metadata.description || '',
+          hookSize: jsonData.metadata.hookSize || '5.0mm (H)',
+          yarnWeight: jsonData.metadata.yarnWeight || 'Medium (4)',
+          gauge: jsonData.metadata.gauge || '',
+          difficulty: jsonData.metadata.difficulty || 'intermediate',
+          notes: jsonData.metadata.notes || '',
+          materials: jsonData.metadata.materials || [],
+        });
+
+        // Clear existing pattern
+        simplePattern.clearPattern();
+
+        // Load canvas settings
+        simplePattern.loadPattern({
+          symbols: jsonData.symbols,
+          rows: jsonData.canvas.rows || 3,
+          cols: jsonData.canvas.cols || 40,
+          gridSize: jsonData.canvas.gridSize || 20,
+          startCol: jsonData.canvas.startCol || 0
+        });
+
+        setPatternState(simplePattern.getPattern());
+        setCurrentPatternId(null); // Reset current pattern ID for new import
+
+        toast({
+          title: "Pattern imported",
+          description: `"${jsonData.metadata.title}" has been imported successfully.`,
+        });
+      } catch (error) {
+        toast({
+          title: "Import failed",
+          description: "Invalid JSON file format. Please check your file and try again.",
+          variant: "destructive",
+        });
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const handleLoadPattern = (pattern: any) => {
     setPatternInfo({
       title: pattern.title || '',
@@ -622,29 +675,7 @@ export default function PatternDesigner() {
               className="text-craft-600 hover:text-craft-800"
             >
               <FolderOpen className="w-4 h-4 mr-2" />
-              Open
-            </Button>
-            <Button
-              onClick={handleSaveCanvas}
-              className="bg-primary hover:bg-primary/90"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              Save
-            </Button>
-            <Button
-              onClick={handleExportImage}
-              className="bg-accent hover:bg-accent/90"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              PNG
-            </Button>
-            <Button
-              onClick={handleExportJSON}
-              variant="outline"
-              className="text-craft-600 hover:text-craft-800"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              JSON
+              Manage
             </Button>
           </div>
         </div>
@@ -692,6 +723,9 @@ export default function PatternDesigner() {
           setPatternInfo={setPatternInfo}
           onSave={handleSaveCanvas}
           onLoad={handleLoadPattern}
+          onExportImage={handleExportImage}
+          onExportJSON={handleExportJSON}
+          onImportJSON={handleImportJSON}
           isLoading={false}
         />
       </div>

@@ -7,7 +7,7 @@ This is a full-stack web application for designing and managing crochet patterns
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
-Priority: Fix top row drawing issues - critical for crochet pattern construction.
+Priority: Streamlined UI with action buttons moved to save manager to reduce header clutter.
 
 ## Recent Changes
 
@@ -35,6 +35,10 @@ Priority: Fix top row drawing issues - critical for crochet pattern construction
   - Implemented color changing for selected symbols when color picker changes
   - Added raw JSON export functionality for pattern data exchange
   - Made app a Progressive Web App (PWA) with offline capability and app installation
+  - Moved action buttons from header to save manager screen to reduce space usage
+  - Added comprehensive export/import functionality within pattern manager modal
+  - Implemented JSON file import with validation and error handling
+  - Enhanced save manager with three-tab interface: Save, Load, and Export
 
 ## System Architecture
 
