@@ -142,7 +142,8 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
                   setCanvasState(prev => ({ 
                     ...prev, 
                     symbol: symbol.id,
-                    tool: 'pen',
+                    // Only switch to pen if coming from eraser or select tools
+                    ...(prev.tool === 'eraser' || prev.tool === 'select' ? { tool: 'pen' } : {}),
                     symbolMirrored: false // Reset mirroring when selecting different symbol
                   }));
                 }
