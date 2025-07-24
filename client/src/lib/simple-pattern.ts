@@ -7,6 +7,7 @@ export interface SimpleSymbol {
   color: string;
   width?: number; // For multi-cell symbols like 2dctog, 3dctog
   occupiedBy?: { row: number; col: number }; // For cells occupied by multi-cell symbols
+  mirrored?: boolean; // For decrease stitches that can be mirrored
 }
 
 export interface SimplePattern {
@@ -40,7 +41,7 @@ export class SimplePatternManager {
   }
 
   // Place a symbol
-  placeSymbol(row: number, col: number, symbol: string, color: string): void {
+  placeSymbol(row: number, col: number, symbol: string, color: string, mirrored: boolean = false): void {
     // Get symbol width for multi-cell symbols
     const getSymbolWidth = (symbolId: string): number => {
       switch (symbolId) {
@@ -72,7 +73,11 @@ export class SimplePatternManager {
     });
 
     // Add the main symbol
-    this.pattern.symbols.push({ row, col, symbol, color, width: symbolWidth });
+    const symbolData: SimpleSymbol = { row, col, symbol, color, width: symbolWidth };
+    if (mirrored && (symbol === '2dctog' || symbol === '3dctog')) {
+      symbolData.mirrored = true;
+    }
+    this.pattern.symbols.push(symbolData);
     
     // Add occupied markers for multi-cell symbols
     for (let i = 1; i < symbolWidth; i++) {

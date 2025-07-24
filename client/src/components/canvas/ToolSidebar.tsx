@@ -53,13 +53,18 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
       if (ctx) {
         // Import and use the actual drawing function
         import('@/lib/crochet-symbols').then(({ drawCrochetSymbol }) => {
-          drawCrochetSymbol(ctx, symbol.id, 16, 16, '#374151', 16);
+          // Use smaller size for multi-cell symbols to fit in button
+          const symbolSize = (symbol.id === '2dctog' || symbol.id === '3dctog') ? 10 : 16;
+          const isMirrored = (symbol.id === '2dctog' || symbol.id === '3dctog') && 
+                            canvasState.symbol === symbol.id && 
+                            canvasState.symbolMirrored;
+          drawCrochetSymbol(ctx, symbol.id, 16, 16, '#374151', symbolSize, isMirrored);
           previews[symbol.id] = canvas.toDataURL();
           setSymbolPreviews(prev => ({ ...prev, [symbol.id]: canvas.toDataURL() }));
         });
       }
     });
-  }, []);
+  }, [canvasState.symbol, canvasState.symbolMirrored]);
 
   const colors = [
     { name: 'Black', value: '#000000' },
@@ -120,14 +125,23 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
                   : "border-craft-200 hover:border-accent hover:bg-accent/5"
               )}
               onClick={() => {
-                setCanvasState(prev => ({ 
-                  ...prev, 
-                  symbol: symbol.id,
-                  tool: 'pen'
-                }));
+                // For decrease stitches, toggle mirroring if same symbol is clicked again
+                if ((symbol.id === '2dctog' || symbol.id === '3dctog') && canvasState.symbol === symbol.id) {
+                  setCanvasState(prev => ({ 
+                    ...prev,
+                    symbolMirrored: !prev.symbolMirrored
+                  }));
+                } else {
+                  setCanvasState(prev => ({ 
+                    ...prev, 
+                    symbol: symbol.id,
+                    tool: 'pen',
+                    symbolMirrored: false // Reset mirroring when selecting different symbol
+                  }));
+                }
               }}
             >
-              <div className="w-8 h-8 flex items-center justify-center">
+              <div className="w-8 h-8 flex items-center justify-center relative">
                 {symbolPreviews[symbol.id] ? (
                   <img 
                     src={symbolPreviews[symbol.id]} 
@@ -136,6 +150,14 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
                   />
                 ) : (
                   <div className="w-4 h-4 bg-craft-300 rounded animate-pulse" />
+                )}
+                {/* Mirroring indicator */}
+                {(symbol.id === '2dctog' || symbol.id === '3dctog') && 
+                 canvasState.symbol === symbol.id && 
+                 canvasState.symbolMirrored && (
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full text-white text-xs flex items-center justify-center">
+                    M
+                  </div>
                 )}
               </div>
               <span className="text-xs text-craft-600">{symbol.label}</span>

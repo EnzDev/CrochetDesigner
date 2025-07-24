@@ -7,7 +7,7 @@ This is a full-stack web application for designing and managing crochet patterns
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
-Priority: Enhanced crochet symbol display to match canvas rendering and fixed decrease stitch positioning.
+Priority: Implemented mirroring feature for decrease stitches with relative placement system.
 
 ## Recent Changes
 
@@ -45,6 +45,11 @@ Priority: Enhanced crochet symbol display to match canvas rendering and fixed de
   - Updated symbol buttons to display actual canvas-rendered symbols for consistency
   - Fixed 2dctog and 3dctog positioning to converge at right side instead of middle
   - Implemented dynamic symbol preview generation using actual drawing functions
+  - Added mirroring feature for decrease stitches (2dctog, 3dctog) with click toggle
+  - Implemented relative placement system for decrease stitches based on DC position
+  - Enhanced symbol display with reduced size for multi-cell symbols in toolbar
+  - Added visual indicator for mirrored symbols with blue "M" badge
+  - Modified decrease stitches to look like single crochet joined with double crochet
 
 ## System Architecture
 

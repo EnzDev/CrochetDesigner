@@ -62,7 +62,8 @@ export function drawCrochetSymbol(
   x: number,
   y: number,
   color: string = '#000000',
-  size: number = 20
+  size: number = 20,
+  mirrored: boolean = false
 ): void {
   ctx.save();
   ctx.strokeStyle = color;
@@ -136,44 +137,72 @@ export function drawCrochetSymbol(
       break;
 
     case '2dctog':
-      // 2 DC together - two vertical lines converging at right side, spanning 2 cells
+      // 2 DC together - looks like 1sc joined with 1dc
       ctx.beginPath();
-      // Left DC line (spans to left edge of symbol)
-      ctx.moveTo(centerX - size * 0.8, y + size * 0.9);
-      ctx.lineTo(centerX - size * 0.8, y + size * 0.3);
-      ctx.lineTo(centerX + size * 0.8, y + size * 0.1);
-      // Right DC line (spans to right edge of symbol)
-      ctx.moveTo(centerX + size * 0.8, y + size * 0.9);
-      ctx.lineTo(centerX + size * 0.8, y + size * 0.1);
-      // Cross lines on each DC
-      ctx.moveTo(centerX - size * 0.8, y + size * 0.5);
-      ctx.lineTo(centerX - size * 0.5, y + size * 0.4);
-      ctx.moveTo(centerX + size * 0.5, y + size * 0.4);
-      ctx.lineTo(centerX + size * 0.8, y + size * 0.5);
+      if (mirrored) {
+        // Mirrored: DC on left, SC on right, converging at left side
+        // Left part: double crochet (full vertical line with cross)
+        ctx.moveTo(centerX - size * 0.8, y + size * 0.9);
+        ctx.lineTo(centerX - size * 0.8, y + size * 0.1);
+        // Right part: single crochet (shorter vertical line)
+        ctx.moveTo(centerX + size * 0.8, y + size * 0.9);
+        ctx.lineTo(centerX + size * 0.8, y + size * 0.5);
+        ctx.lineTo(centerX - size * 0.8, y + size * 0.1);
+        // Cross line on the DC part only
+        ctx.moveTo(centerX - size * 0.8, y + size * 0.5);
+        ctx.lineTo(centerX - size * 0.5, y + size * 0.4);
+      } else {
+        // Normal: SC on left, DC on right, converging at right side
+        // Left part: single crochet (shorter vertical line)
+        ctx.moveTo(centerX - size * 0.8, y + size * 0.9);
+        ctx.lineTo(centerX - size * 0.8, y + size * 0.5);
+        ctx.lineTo(centerX + size * 0.8, y + size * 0.1);
+        // Right part: double crochet (full vertical line with cross)
+        ctx.moveTo(centerX + size * 0.8, y + size * 0.9);
+        ctx.lineTo(centerX + size * 0.8, y + size * 0.1);
+        // Cross line on the DC part only
+        ctx.moveTo(centerX + size * 0.5, y + size * 0.4);
+        ctx.lineTo(centerX + size * 0.8, y + size * 0.5);
+      }
       ctx.stroke();
       break;
 
     case '3dctog':
-      // 3 DC together - three vertical lines converging at right side, spans 3 cells
+      // 3 DC together - looks like 2sc joined with 1dc
       ctx.beginPath();
-      // Left DC line (spans to left edge)
-      ctx.moveTo(centerX - size * 1.2, y + size * 0.9);
-      ctx.lineTo(centerX - size * 1.2, y + size * 0.3);
-      ctx.lineTo(centerX + size * 1.2, y + size * 0.1);
-      // Middle DC line
-      ctx.moveTo(centerX, y + size * 0.9);
-      ctx.lineTo(centerX, y + size * 0.3);
-      ctx.lineTo(centerX + size * 1.2, y + size * 0.1);
-      // Right DC line (spans to right edge)
-      ctx.moveTo(centerX + size * 1.2, y + size * 0.9);
-      ctx.lineTo(centerX + size * 1.2, y + size * 0.1);
-      // Cross lines on each DC
-      ctx.moveTo(centerX - size * 1.2, y + size * 0.5);
-      ctx.lineTo(centerX - size * 0.9, y + size * 0.4);
-      ctx.moveTo(centerX - size * 0.2, y + size * 0.45);
-      ctx.lineTo(centerX + size * 0.2, y + size * 0.45);
-      ctx.moveTo(centerX + size * 0.9, y + size * 0.4);
-      ctx.lineTo(centerX + size * 1.2, y + size * 0.5);
+      if (mirrored) {
+        // Mirrored: DC on left, 2SC on right, converging at left side
+        // Left part: double crochet (full vertical line with cross)
+        ctx.moveTo(centerX - size * 1.2, y + size * 0.9);
+        ctx.lineTo(centerX - size * 1.2, y + size * 0.1);
+        // Middle part: single crochet (shorter vertical line)
+        ctx.moveTo(centerX, y + size * 0.9);
+        ctx.lineTo(centerX, y + size * 0.5);
+        ctx.lineTo(centerX - size * 1.2, y + size * 0.1);
+        // Right part: single crochet (shorter vertical line)
+        ctx.moveTo(centerX + size * 1.2, y + size * 0.9);
+        ctx.lineTo(centerX + size * 1.2, y + size * 0.5);
+        ctx.lineTo(centerX - size * 1.2, y + size * 0.1);
+        // Cross line on the DC part only
+        ctx.moveTo(centerX - size * 1.2, y + size * 0.5);
+        ctx.lineTo(centerX - size * 0.9, y + size * 0.4);
+      } else {
+        // Normal: 2SC on left, DC on right, converging at right side
+        // Left part: single crochet (shorter vertical line)
+        ctx.moveTo(centerX - size * 1.2, y + size * 0.9);
+        ctx.lineTo(centerX - size * 1.2, y + size * 0.5);
+        ctx.lineTo(centerX + size * 1.2, y + size * 0.1);
+        // Middle part: single crochet (shorter vertical line)
+        ctx.moveTo(centerX, y + size * 0.9);
+        ctx.lineTo(centerX, y + size * 0.5);
+        ctx.lineTo(centerX + size * 1.2, y + size * 0.1);
+        // Right part: double crochet (full vertical line with cross)
+        ctx.moveTo(centerX + size * 1.2, y + size * 0.9);
+        ctx.lineTo(centerX + size * 1.2, y + size * 0.1);
+        // Cross line on the DC part only
+        ctx.moveTo(centerX + size * 0.9, y + size * 0.4);
+        ctx.lineTo(centerX + size * 1.2, y + size * 0.5);
+      }
       ctx.stroke();
       break;
 

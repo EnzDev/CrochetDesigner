@@ -20,6 +20,7 @@ export interface CanvasState {
   zoom: number;
   canvasRows: number;
   canvasCols: number;
+  symbolMirrored: boolean; // For mirroring decrease stitches
 }
 
 export interface SelectionArea {
@@ -61,6 +62,7 @@ export default function PatternDesigner() {
     zoom: 100,
     canvasRows: 3, // Start with 3 rows (1 working row + 2 empty rows above)
     canvasCols: 40, // Default number of columns
+    symbolMirrored: false,
   });
 
   // Use simple pattern state
@@ -191,7 +193,25 @@ export default function PatternDesigner() {
 
   // Symbol placement and removal handlers
   const handleSymbolPlaced = (row: number, col: number, symbol: string, color: string) => {
-    simplePattern.placeSymbol(row, col, symbol, color);
+    // For decrease stitches, implement relative placement based on the DC position
+    if (symbol === '2dctog' || symbol === '3dctog') {
+      const symbolWidth = symbol === '2dctog' ? 2 : 3;
+      const isMirrored = canvasState.symbolMirrored;
+      
+      // Calculate placement column based on mirroring and DC position
+      let placementCol = col;
+      if (isMirrored) {
+        // For mirrored: DC is on the left, so place at clicked position
+        placementCol = col;
+      } else {
+        // For normal: DC is on the right, so adjust placement to the left
+        placementCol = col - (symbolWidth - 1);
+      }
+      
+      simplePattern.placeSymbol(row, placementCol, symbol, color, isMirrored);
+    } else {
+      simplePattern.placeSymbol(row, col, symbol, color);
+    }
     setPatternState(simplePattern.getPattern());
   };
 
@@ -226,7 +246,10 @@ export default function PatternDesigner() {
       const x = symbol.col * canvasState.gridSize + canvasState.gridSize / 2 + centerOffset;
       const y = symbol.row * canvasState.gridSize + canvasState.gridSize / 2;
       
-      drawCrochetSymbol(ctx, symbol.symbol, x, y, symbol.color, canvasState.gridSize * 0.8);
+      // Check if symbol should be mirrored (for decrease stitches)
+      const isMirrored = (symbol.symbol === '2dctog' || symbol.symbol === '3dctog') && 
+                        symbol.mirrored === true;
+      drawCrochetSymbol(ctx, symbol.symbol, x, y, symbol.color, canvasState.gridSize * 0.8, isMirrored);
     });
 
     // Draw selection rectangle if selecting

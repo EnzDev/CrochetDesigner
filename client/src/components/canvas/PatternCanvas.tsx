@@ -274,7 +274,7 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
           const symbolX = col * canvasState.gridSize + canvasState.gridSize / 2;
           const symbolY = row * canvasState.gridSize + canvasState.gridSize / 2;
           if (canvasState.symbol) {
-            drawCrochetSymbol(ctx, canvasState.symbol, symbolX, symbolY, canvasState.color, canvasState.gridSize);
+            drawCrochetSymbol(ctx, canvasState.symbol, symbolX, symbolY, canvasState.color, canvasState.gridSize, canvasState.symbolMirrored);
           }
         }
       }
