@@ -492,6 +492,43 @@ const PatternCanvas = forwardRef<HTMLCanvasElement, PatternCanvasProps>(
                   }}
                 />
               )}
+              
+              {/* Hover preview for decrease stitches */}
+              {hoverGridPos && canvasState.tool === 'pen' && 
+               (canvasState.symbol === '2dctog' || canvasState.symbol === '3dctog') && (
+                (() => {
+                  const gridCol = Math.floor(hoverGridPos.x / canvasState.gridSize);
+                  const gridRow = Math.floor(hoverGridPos.y / canvasState.gridSize);
+                  const symbolWidth = canvasState.symbol === '2dctog' ? 2 : 3;
+                  
+                  let previewCol = gridCol;
+                  if (!canvasState.symbolMirrored) {
+                    // Normal: position so DC is at clicked position
+                    previewCol = gridCol - (symbolWidth - 1);
+                  }
+                  
+                  // Create preview indicators for each cell the symbol will occupy
+                  const indicators = [];
+                  for (let i = 0; i < symbolWidth; i++) {
+                    const currentCol = previewCol + i;
+                    if (currentCol >= 0) { // Only show if within bounds
+                      indicators.push(
+                        <div
+                          key={i}
+                          className="absolute border-2 border-green-400 bg-green-200/20 pointer-events-none"
+                          style={{
+                            left: currentCol * canvasState.gridSize,
+                            top: gridRow * canvasState.gridSize,
+                            width: canvasState.gridSize,
+                            height: canvasState.gridSize,
+                          }}
+                        />
+                      );
+                    }
+                  }
+                  return indicators;
+                })()
+              )}
               </div>
             </div>
           </div>

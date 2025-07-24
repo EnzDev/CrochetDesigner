@@ -204,7 +204,8 @@ export default function PatternDesigner() {
         // For mirrored: DC is on the left, so place at clicked position
         placementCol = col;
       } else {
-        // For normal: DC is on the right, so adjust placement to the left
+        // For normal: DC is on the right, so click should position the DC at the clicked spot
+        // This means the symbol starts at (clicked position - width + 1)
         placementCol = col - (symbolWidth - 1);
       }
       

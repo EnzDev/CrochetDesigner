@@ -50,6 +50,8 @@ Priority: Implemented mirroring feature for decrease stitches with relative plac
   - Enhanced symbol display with reduced size for multi-cell symbols in toolbar
   - Added visual indicator for mirrored symbols with blue "M" badge
   - Modified decrease stitches to look like single crochet joined with double crochet
+  - Fixed placement logic so normal direction positions DC at clicked location for proper overlay capability
+  - Added green hover preview showing exactly where multi-cell symbols will be placed
 
 ## System Architecture
 
