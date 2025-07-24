@@ -242,8 +242,8 @@ export default function PatternDesigner() {
     
     // Draw symbols from pattern state
     patternState.symbols.forEach((symbol) => {
-      // Skip occupied markers - only draw actual symbols
-      if (symbol.symbol === 'occupied') return;
+      // Skip occupied markers and sc_overlay markers - only draw actual symbols
+      if (symbol.symbol === 'occupied' || symbol.symbol === 'sc_overlay') return;
       
       // For multi-cell symbols, center them across their width
       const symbolWidth = symbol.width || 1;
@@ -428,7 +428,7 @@ export default function PatternDesigner() {
         difficulty: patternInfo.difficulty,
         canvasData,
         gridSymbols: Object.fromEntries(
-          patternState.symbols.map(s => [`${s.row}-${s.col}`, { 
+          patternState.symbols.filter(s => s.symbol !== 'occupied' && s.symbol !== 'sc_overlay').map(s => [`${s.row}-${s.col}`, { 
             symbol: s.symbol, 
             color: s.color, 
             width: s.width || 1,
@@ -487,7 +487,7 @@ export default function PatternDesigner() {
         gridSize: patternState.gridSize,
         startCol: patternState.startCol
       },
-      symbols: patternState.symbols.filter(s => s.symbol !== 'occupied').map(s => ({
+      symbols: patternState.symbols.filter(s => s.symbol !== 'occupied' && s.symbol !== 'sc_overlay').map(s => ({
         row: s.row,
         col: s.col,
         symbol: s.symbol,

@@ -80,23 +80,37 @@ export class SimplePatternManager {
       });
     }
     
-    // For decrease stitches, only clear the DC position, allow overlay on SC parts
+    // Handle clearing based on symbol type
     if (symbol === '2dctog' || symbol === '3dctog') {
-      if (mirrored) {
-        // Mirrored: DC is at the leftmost position (actualCol)
-        // Only clear the DC position
+      // For decrease stitches, clear ALL positions they span - we'll handle overlays differently
+      for (let i = 0; i < symbolWidth; i++) {
         this.pattern.symbols = this.pattern.symbols.filter(s => 
-          !(s.row === row && s.col === actualCol)
-        );
-      } else {
-        // Normal: DC is at the rightmost position (actualCol + symbolWidth - 1)
-        // Only clear the DC position
-        const dcCol = actualCol + symbolWidth - 1;
-        this.pattern.symbols = this.pattern.symbols.filter(s => 
-          !(s.row === row && s.col === dcCol)
+          !(s.row === row && s.col === actualCol + i)
         );
       }
     } else {
+      // For regular symbols, check if trying to place over a DC position of decrease stitch
+      const conflictingDecreaseStitch = this.pattern.symbols.find(s => {
+        if (s.symbol !== '2dctog' && s.symbol !== '3dctog') return false;
+        
+        const sWidth = s.width || 1;
+        const sMirrored = s.mirrored || false;
+        
+        if (sMirrored) {
+          // Mirrored: DC is at leftmost position
+          return s.row === row && s.col === actualCol;
+        } else {
+          // Normal: DC is at rightmost position
+          const dcCol = s.col + sWidth - 1;
+          return s.row === row && dcCol === actualCol;
+        }
+      });
+      
+      if (conflictingDecreaseStitch) {
+        // Cannot place over DC position
+        return;
+      }
+      
       // For regular symbols, clear all positions they will occupy
       for (let i = 0; i < symbolWidth; i++) {
         this.pattern.symbols = this.pattern.symbols.filter(s => 
@@ -120,9 +134,33 @@ export class SimplePatternManager {
     }
     this.pattern.symbols.push(symbolData);
     
-    // For decrease stitches, don't add occupied markers to allow overlay on SC parts
+    // For decrease stitches, add special markers that protect only the DC position
     if (symbol === '2dctog' || symbol === '3dctog') {
-      // Don't add occupied markers - this allows other symbols to be placed on SC parts
+      if (mirrored) {
+        // Mirrored: DC at leftmost position - protect it with occupied marker
+        // SC positions (right side) remain open for overlays
+        for (let i = 1; i < symbolWidth; i++) {
+          this.pattern.symbols.push({ 
+            row, 
+            col: actualCol + i, 
+            symbol: 'sc_overlay', // Special marker for SC positions
+            color, 
+            occupiedBy: { row, col: actualCol } 
+          });
+        }
+      } else {
+        // Normal: DC at rightmost position - protect it with occupied marker
+        // SC positions (left side) remain open for overlays
+        for (let i = 0; i < symbolWidth - 1; i++) {
+          this.pattern.symbols.push({ 
+            row, 
+            col: actualCol + i, 
+            symbol: 'sc_overlay', // Special marker for SC positions
+            color, 
+            occupiedBy: { row, col: actualCol } 
+          });
+        }
+      }
     } else {
       // Add occupied markers for regular multi-cell symbols
       for (let i = 1; i < symbolWidth; i++) {
@@ -285,8 +323,8 @@ export class SimplePatternManager {
     
     // Update color for all symbols in the selection area
     this.pattern.symbols.forEach(symbol => {
-      // Skip occupied markers - only change actual symbols
-      if (symbol.symbol === 'occupied') return;
+      // Skip occupied markers and sc_overlay markers - only change actual symbols
+      if (symbol.symbol === 'occupied' || symbol.symbol === 'sc_overlay') return;
       
       if (symbol.row >= minRow && symbol.row <= maxRow && 
           symbol.col >= minCol && symbol.col <= maxCol) {
@@ -418,8 +456,8 @@ export class SimplePatternManager {
     const processedSymbols: SimpleSymbol[] = [];
     
     data.symbols.forEach(symbol => {
-      // Only process actual symbols, skip occupied markers from saved data
-      if (symbol.symbol === 'occupied') return;
+      // Only process actual symbols, skip occupied markers and sc_overlay markers from saved data
+      if (symbol.symbol === 'occupied' || symbol.symbol === 'sc_overlay') return;
       
       // Add the main symbol
       processedSymbols.push({...symbol});
