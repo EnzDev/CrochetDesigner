@@ -7,7 +7,7 @@ This is a full-stack web application for designing and managing crochet patterns
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
-Priority: Streamlined UI with action buttons moved to save manager to reduce header clutter.
+Priority: Fixed symbol selection behavior and improved visual representation of crochet symbols.
 
 ## Recent Changes
 
@@ -39,6 +39,9 @@ Priority: Streamlined UI with action buttons moved to save manager to reduce hea
   - Added comprehensive export/import functionality within pattern manager modal
   - Implemented JSON file import with validation and error handling
   - Enhanced save manager with three-tab interface: Save, Load, and Export
+  - Fixed symbol selection logic to prevent unintended deselection when re-clicking
+  - Selection now clears automatically when switching away from select tool
+  - Improved crochet symbol buttons with proper visual symbols instead of text abbreviations
 
 ## System Architecture
 

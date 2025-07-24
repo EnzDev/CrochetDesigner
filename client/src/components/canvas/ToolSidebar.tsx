@@ -27,14 +27,14 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
   ] as const;
 
   const symbols = [
-    { id: 'chain', label: 'Chain', preview: 'ch' },
-    { id: 'sc', label: 'SC', preview: 'sc' },
-    { id: 'dc', label: 'DC', preview: 'dc' },
-    { id: 'tr', label: 'TR', preview: 'tr' },
-    { id: 'sl', label: 'SL ST', preview: 'sl' },
-    { id: 'yo', label: 'YO', preview: 'yo' },
-    { id: '2dctog', label: '2DC Tog', preview: '2tog' },
-    { id: '3dctog', label: '3DC Tog', preview: '3tog' },
+    { id: 'chain', label: 'Chain', preview: '○' },
+    { id: 'sc', label: 'SC', preview: '×' },
+    { id: 'dc', label: 'DC', preview: '┃' },
+    { id: 'tr', label: 'TR', preview: '┬' },
+    { id: 'sl', label: 'SL ST', preview: '━' },
+    { id: 'yo', label: 'YO', preview: '○' },
+    { id: '2dctog', label: '2DC Tog', preview: '╱' },
+    { id: '3dctog', label: '3DC Tog', preview: '╲' },
   ];
 
   const colors = [
@@ -66,7 +66,12 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
                     ? "bg-accent text-white border-accent"
                     : "border-craft-200 hover:border-accent"
                 )}
-                onClick={() => setCanvasState(prev => ({ ...prev, tool: tool.id as any }))}
+                onClick={() => setCanvasState(prev => ({ 
+                  ...prev, 
+                  tool: tool.id as any,
+                  // Clear symbol selection when switching away from pen tool
+                  ...(tool.id !== 'pen' ? { symbol: null } : {})
+                }))}
               >
                 <Icon className="w-4 h-4" />
                 <span className="text-xs">{tool.label}</span>
@@ -93,12 +98,12 @@ export default function ToolSidebar({ canvasState, setCanvasState, onClearCanvas
               onClick={() => {
                 setCanvasState(prev => ({ 
                   ...prev, 
-                  symbol: prev.symbol === symbol.id ? null : symbol.id,
+                  symbol: symbol.id,
                   tool: 'pen'
                 }));
               }}
             >
-              <div className="w-6 h-6 flex items-center justify-center text-xs font-mono">
+              <div className="w-8 h-8 flex items-center justify-center text-lg font-bold text-craft-800">
                 {symbol.preview}
               </div>
               <span className="text-xs text-craft-600">{symbol.label}</span>
