@@ -80,11 +80,29 @@ export class SimplePatternManager {
       });
     }
     
-    // Remove any existing symbols in the range this symbol will occupy
-    for (let i = 0; i < symbolWidth; i++) {
-      this.pattern.symbols = this.pattern.symbols.filter(s => 
-        !(s.row === row && s.col === actualCol + i)
-      );
+    // For decrease stitches, only clear the DC position, allow overlay on SC parts
+    if (symbol === '2dctog' || symbol === '3dctog') {
+      if (mirrored) {
+        // Mirrored: DC is at the leftmost position (actualCol)
+        // Only clear the DC position
+        this.pattern.symbols = this.pattern.symbols.filter(s => 
+          !(s.row === row && s.col === actualCol)
+        );
+      } else {
+        // Normal: DC is at the rightmost position (actualCol + symbolWidth - 1)
+        // Only clear the DC position
+        const dcCol = actualCol + symbolWidth - 1;
+        this.pattern.symbols = this.pattern.symbols.filter(s => 
+          !(s.row === row && s.col === dcCol)
+        );
+      }
+    } else {
+      // For regular symbols, clear all positions they will occupy
+      for (let i = 0; i < symbolWidth; i++) {
+        this.pattern.symbols = this.pattern.symbols.filter(s => 
+          !(s.row === row && s.col === actualCol + i)
+        );
+      }
     }
     
     // Also remove any symbols that this position might be occupied by
@@ -102,15 +120,20 @@ export class SimplePatternManager {
     }
     this.pattern.symbols.push(symbolData);
     
-    // Add occupied markers for multi-cell symbols
-    for (let i = 1; i < symbolWidth; i++) {
-      this.pattern.symbols.push({ 
-        row, 
-        col: actualCol + i, 
-        symbol: 'occupied', 
-        color, 
-        occupiedBy: { row, col: actualCol } 
-      });
+    // For decrease stitches, don't add occupied markers to allow overlay on SC parts
+    if (symbol === '2dctog' || symbol === '3dctog') {
+      // Don't add occupied markers - this allows other symbols to be placed on SC parts
+    } else {
+      // Add occupied markers for regular multi-cell symbols
+      for (let i = 1; i < symbolWidth; i++) {
+        this.pattern.symbols.push({ 
+          row, 
+          col: actualCol + i, 
+          symbol: 'occupied', 
+          color, 
+          occupiedBy: { row, col: actualCol } 
+        });
+      }
     }
   }
 
@@ -401,16 +424,18 @@ export class SimplePatternManager {
       // Add the main symbol
       processedSymbols.push({...symbol});
       
-      // Add occupied markers for multi-cell symbols
-      const symbolWidth = symbol.width || 1;
-      for (let i = 1; i < symbolWidth; i++) {
-        processedSymbols.push({ 
-          row: symbol.row, 
-          col: symbol.col + i, 
-          symbol: 'occupied', 
-          color: symbol.color, 
-          occupiedBy: { row: symbol.row, col: symbol.col } 
-        });
+      // Add occupied markers for multi-cell symbols (but not for decrease stitches)
+      if (symbol.symbol !== '2dctog' && symbol.symbol !== '3dctog') {
+        const symbolWidth = symbol.width || 1;
+        for (let i = 1; i < symbolWidth; i++) {
+          processedSymbols.push({ 
+            row: symbol.row, 
+            col: symbol.col + i, 
+            symbol: 'occupied', 
+            color: symbol.color, 
+            occupiedBy: { row: symbol.row, col: symbol.col } 
+          });
+        }
       }
     });
     
