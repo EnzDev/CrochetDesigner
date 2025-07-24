@@ -176,11 +176,14 @@ export default function PatternDesigner() {
     if (copiedSymbols.length === 0) return;
     
     copiedSymbols.forEach(symbol => {
+      // Preserve mirroring state when pasting
+      const isMirrored = symbol.mirrored || false;
       simplePattern.placeSymbol(
         targetRow + symbol.row,
         targetCol + symbol.col,
         symbol.symbol,
-        symbol.color
+        symbol.color,
+        isMirrored
       );
     });
     
@@ -202,11 +205,12 @@ export default function PatternDesigner() {
       let placementCol = col;
       if (isMirrored) {
         // For mirrored: DC is on the left, so place at clicked position
+        // The symbol spans from clicked position to the right
         placementCol = col;
       } else {
-        // For normal: DC is on the right, so click should position the DC at the clicked spot
-        // This means the symbol starts at (clicked position - width + 1)
-        placementCol = col - (symbolWidth - 1);
+        // For normal: DC is on the right, so the symbol should be stored at the rightmost position
+        // But spanning left, so the clicked position becomes the rightmost cell
+        placementCol = col;
       }
       
       simplePattern.placeSymbol(row, placementCol, symbol, color, isMirrored);
@@ -424,7 +428,12 @@ export default function PatternDesigner() {
         difficulty: patternInfo.difficulty,
         canvasData,
         gridSymbols: Object.fromEntries(
-          patternState.symbols.map(s => [`${s.row}-${s.col}`, { symbol: s.symbol, color: s.color, width: s.width || 1 }])
+          patternState.symbols.map(s => [`${s.row}-${s.col}`, { 
+            symbol: s.symbol, 
+            color: s.color, 
+            width: s.width || 1,
+            mirrored: s.mirrored || false
+          }])
         ),
         canvasRows: patternState.rows,
         canvasCols: patternState.cols,
@@ -483,7 +492,8 @@ export default function PatternDesigner() {
         col: s.col,
         symbol: s.symbol,
         color: s.color,
-        width: s.width || 1
+        width: s.width || 1,
+        mirrored: s.mirrored || false
       }))
     };
 
@@ -591,7 +601,8 @@ export default function PatternDesigner() {
           col: s.col,
           symbol: s.symbol || s.symbolType,
           color: s.color,
-          width: s.width || 1
+          width: s.width || 1,
+          mirrored: s.mirrored || false
         }));
       } else {
         symbols = Object.entries(pattern.gridSymbols).map(([key, value]: [string, any]) => {
@@ -601,7 +612,8 @@ export default function PatternDesigner() {
             col,
             symbol: value.symbol || value.symbolType,
             color: value.color,
-            width: value.width || 1
+            width: value.width || 1,
+            mirrored: value.mirrored || false
           };
         });
       }

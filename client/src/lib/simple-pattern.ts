@@ -52,28 +52,51 @@ export class SimplePatternManager {
     };
     
     const symbolWidth = getSymbolWidth(symbol);
+    let actualCol = col;
+    
+    // For normal (non-mirrored) decrease stitches, adjust placement to span left
+    if ((symbol === '2dctog' || symbol === '3dctog') && !mirrored) {
+      // Place the symbol so that the DC (rightmost part) is at the clicked position
+      // This means the symbol actually starts further left
+      actualCol = col - (symbolWidth - 1);
+    }
     
     // Ensure grid is large enough
     if (row >= this.pattern.rows) this.pattern.rows = row + 1;
-    if (col + symbolWidth > this.pattern.cols) this.pattern.cols = col + symbolWidth;
+    if (actualCol + symbolWidth > this.pattern.cols) this.pattern.cols = actualCol + symbolWidth;
+    if (actualCol < 0) {
+      // Handle negative columns by expanding left
+      const expansion = Math.abs(actualCol);
+      this.pattern.startCol -= expansion;
+      this.pattern.cols += expansion;
+      actualCol = 0;
+      
+      // Shift all existing symbols right
+      this.pattern.symbols.forEach(s => {
+        s.col += expansion;
+        if (s.occupiedBy) {
+          s.occupiedBy.col += expansion;
+        }
+      });
+    }
     
     // Remove any existing symbols in the range this symbol will occupy
     for (let i = 0; i < symbolWidth; i++) {
       this.pattern.symbols = this.pattern.symbols.filter(s => 
-        !(s.row === row && s.col === col + i)
+        !(s.row === row && s.col === actualCol + i)
       );
     }
     
     // Also remove any symbols that this position might be occupied by
     this.pattern.symbols = this.pattern.symbols.filter(s => {
-      if (s.occupiedBy && s.occupiedBy.row === row && s.occupiedBy.col <= col && col < s.occupiedBy.col + (s.width || 1)) {
+      if (s.occupiedBy && s.occupiedBy.row === row && s.occupiedBy.col <= actualCol && actualCol < s.occupiedBy.col + (s.width || 1)) {
         return false; // Remove the occupied cell
       }
       return true;
     });
 
     // Add the main symbol
-    const symbolData: SimpleSymbol = { row, col, symbol, color, width: symbolWidth };
+    const symbolData: SimpleSymbol = { row, col: actualCol, symbol, color, width: symbolWidth };
     if (mirrored && (symbol === '2dctog' || symbol === '3dctog')) {
       symbolData.mirrored = true;
     }
@@ -83,10 +106,10 @@ export class SimplePatternManager {
     for (let i = 1; i < symbolWidth; i++) {
       this.pattern.symbols.push({ 
         row, 
-        col: col + i, 
+        col: actualCol + i, 
         symbol: 'occupied', 
         color, 
-        occupiedBy: { row, col } 
+        occupiedBy: { row, col: actualCol } 
       });
     }
   }
@@ -368,8 +391,31 @@ export class SimplePatternManager {
 
   // Load pattern
   loadPattern(data: { symbols: SimpleSymbol[]; rows: number; cols: number; gridSize: number; startCol?: number }): void {
+    // Process symbols to rebuild occupied markers for multi-cell symbols
+    const processedSymbols: SimpleSymbol[] = [];
+    
+    data.symbols.forEach(symbol => {
+      // Only process actual symbols, skip occupied markers from saved data
+      if (symbol.symbol === 'occupied') return;
+      
+      // Add the main symbol
+      processedSymbols.push({...symbol});
+      
+      // Add occupied markers for multi-cell symbols
+      const symbolWidth = symbol.width || 1;
+      for (let i = 1; i < symbolWidth; i++) {
+        processedSymbols.push({ 
+          row: symbol.row, 
+          col: symbol.col + i, 
+          symbol: 'occupied', 
+          color: symbol.color, 
+          occupiedBy: { row: symbol.row, col: symbol.col } 
+        });
+      }
+    });
+    
     this.pattern = {
-      symbols: [...data.symbols],
+      symbols: processedSymbols,
       rows: data.rows,
       cols: data.cols,
       gridSize: data.gridSize,
