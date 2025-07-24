@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Download, FolderOpen, Save } from "lucide-react";
+import { Download, FolderOpen, Save, FileDown, FileUp } from "lucide-react";
 import PatternCanvas from "@/components/canvas/PatternCanvas";
 import ToolSidebar from "@/components/canvas/ToolSidebar";
 import PatternInfoPanel from "@/components/canvas/PatternInfoPanel";
@@ -9,6 +9,7 @@ import { SavePatternModal } from "@/components/modals/SavePatternModal";
 import { indexedDBStorage } from "@/lib/indexdb-storage";
 import { drawCrochetSymbol } from "@/lib/crochet-symbols";
 import { simplePattern, type SimplePattern, type SimpleSymbol } from "@/lib/simple-pattern";
+import { exportPatternAsJSON, downloadJSON, importPatternFromJSON, readFileAsText } from "@/lib/json-export";
 
 export interface CanvasState {
   tool: 'pen' | 'eraser' | 'fill' | 'select';
@@ -524,7 +525,106 @@ export default function PatternDesigner() {
       title: "Pattern exported",
       description: "Your pattern has been exported as an image.",
     });
+  }
+
+  const handleExportJSON = () => {
+    if (!canvasRef.current) return;
+    
+    const canvasData = canvasRef.current.toDataURL();
+    const jsonString = exportPatternAsJSON(
+      patternState,
+      patternInfo,
+      {
+        showGrid: canvasState.showGrid,
+        gridStyle: canvasState.gridStyle,
+        zoom: canvasState.zoom
+      },
+      canvasData
+    );
+    
+    const filename = patternInfo.title ? 
+      `${patternInfo.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_pattern` : 
+      'crochet_pattern';
+    
+    downloadJSON(jsonString, filename);
+    
+    toast({
+      title: "Pattern Exported",
+      description: "JSON file has been downloaded to your device.",
+    });
   };
+
+  const handleImportJSON = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      
+      try {
+        const jsonString = await readFileAsText(file);
+        const importedPattern = importPatternFromJSON(jsonString);
+        
+        if (!importedPattern) {
+          toast({
+            title: "Import Failed",
+            description: "Invalid pattern file format.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Load pattern data
+        setPatternInfo({
+          title: importedPattern.metadata.title,
+          description: importedPattern.metadata.description || '',
+          hookSize: importedPattern.metadata.hookSize,
+          yarnWeight: importedPattern.metadata.yarnWeight,
+          gauge: importedPattern.metadata.gauge || '',
+          difficulty: importedPattern.metadata.difficulty,
+          notes: importedPattern.metadata.notes || '',
+          materials: importedPattern.metadata.materials,
+        });
+        
+        setCanvasState(prev => ({
+          ...prev,
+          showGrid: importedPattern.settings.showGrid,
+          gridStyle: importedPattern.settings.gridStyle,
+          zoom: importedPattern.settings.zoom,
+          canvasRows: importedPattern.pattern.rows,
+          canvasCols: importedPattern.pattern.cols,
+          gridSize: importedPattern.pattern.gridSize,
+        }));
+        
+        // Clear existing pattern and load new one
+        simplePattern.clearPattern();
+        simplePattern.loadPattern({
+          symbols: importedPattern.pattern.symbols,
+          rows: importedPattern.pattern.rows,
+          cols: importedPattern.pattern.cols,
+          gridSize: importedPattern.pattern.gridSize,
+          startCol: importedPattern.pattern.startCol,
+        });
+        
+        setPatternState(simplePattern.getPattern());
+        
+        toast({
+          title: "Pattern Imported",
+          description: `Successfully imported "${importedPattern.metadata.title}".`,
+        });
+        
+      } catch (error) {
+        toast({
+          title: "Import Failed",
+          description: "Could not read the pattern file.",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    input.click();
+  };;
 
   const handleUndo = () => {
     if (simplePattern.undo()) {
@@ -589,7 +689,23 @@ export default function PatternDesigner() {
               className="bg-accent hover:bg-accent/90"
             >
               <Download className="w-4 h-4 mr-2" />
-              Export
+              Export PNG
+            </Button>
+            <Button
+              onClick={handleExportJSON}
+              variant="outline"
+              className="border-primary text-primary hover:bg-primary hover:text-white"
+            >
+              <FileDown className="w-4 h-4 mr-2" />
+              Export JSON
+            </Button>
+            <Button
+              onClick={handleImportJSON}
+              variant="outline"
+              className="border-secondary text-secondary hover:bg-secondary hover:text-white"
+            >
+              <FileUp className="w-4 h-4 mr-2" />
+              Import JSON
             </Button>
           </div>
         </div>
