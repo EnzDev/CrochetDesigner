@@ -242,13 +242,26 @@ export default function PatternDesigner() {
     
     // Draw symbols from pattern state
     patternState.symbols.forEach((symbol) => {
-      // Skip occupied markers and sc_overlay markers - only draw actual symbols
-      if (symbol.symbol === 'occupied' || symbol.symbol === 'sc_overlay') return;
+      // Skip occupied markers - only draw actual symbols
+      if (symbol.symbol === 'occupied') return;
+      
+      // For decrease stitches, calculate the drawing position based on storage location
+      const symbolWidth = symbol.width || 1;
+      let drawCol = symbol.col;
+      
+      if (symbol.symbol === '2dctog' || symbol.symbol === '3dctog') {
+        if (symbol.mirrored) {
+          // Mirrored: stored at leftmost (DC) position, draw from there
+          drawCol = symbol.col;
+        } else {
+          // Normal: stored at rightmost (DC) position, need to draw from left
+          drawCol = symbol.col - (symbolWidth - 1);
+        }
+      }
       
       // For multi-cell symbols, center them across their width
-      const symbolWidth = symbol.width || 1;
       const centerOffset = (symbolWidth - 1) * canvasState.gridSize / 2;
-      const x = symbol.col * canvasState.gridSize + canvasState.gridSize / 2 + centerOffset;
+      const x = drawCol * canvasState.gridSize + canvasState.gridSize / 2 + centerOffset;
       const y = symbol.row * canvasState.gridSize + canvasState.gridSize / 2;
       
       // Check if symbol should be mirrored (for decrease stitches)
@@ -428,7 +441,7 @@ export default function PatternDesigner() {
         difficulty: patternInfo.difficulty,
         canvasData,
         gridSymbols: Object.fromEntries(
-          patternState.symbols.filter(s => s.symbol !== 'occupied' && s.symbol !== 'sc_overlay').map(s => [`${s.row}-${s.col}`, { 
+          patternState.symbols.filter(s => s.symbol !== 'occupied').map(s => [`${s.row}-${s.col}`, { 
             symbol: s.symbol, 
             color: s.color, 
             width: s.width || 1,
@@ -487,7 +500,7 @@ export default function PatternDesigner() {
         gridSize: patternState.gridSize,
         startCol: patternState.startCol
       },
-      symbols: patternState.symbols.filter(s => s.symbol !== 'occupied' && s.symbol !== 'sc_overlay').map(s => ({
+      symbols: patternState.symbols.filter(s => s.symbol !== 'occupied').map(s => ({
         row: s.row,
         col: s.col,
         symbol: s.symbol,
